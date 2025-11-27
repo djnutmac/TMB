@@ -1074,19 +1074,27 @@
                 if (!response.ok) throw new Error(`Corsproxy error: ${response.status}`);
                 return await response.json();
             } catch (e1) {
-                // Strategy 2: AllOrigins (Wrapped JSON)
+                // Strategy 2: CodeTabs (Alternative)
                 try {
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
                     const response = await fetch(proxyUrl);
-                    const data = await response.json();
-                    if (!data.contents) throw new Error("Risposta vuota dal proxy");
-                    try {
-                        return JSON.parse(data.contents);
-                    } catch (parseError) {
-                        throw new Error(`Proxy returned non-JSON`);
-                    }
+                    if (!response.ok) throw new Error(`CodeTabs error: ${response.status}`);
+                    return await response.json();
                 } catch (e2) {
-                    throw e2;
+                    // Strategy 3: AllOrigins (Wrapped JSON)
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                        const response = await fetch(proxyUrl);
+                        const data = await response.json();
+                        if (!data.contents) throw new Error("Risposta vuota dal proxy");
+                        try {
+                            return JSON.parse(data.contents);
+                        } catch (parseError) {
+                            throw new Error(`Proxy returned non-JSON`);
+                        }
+                    } catch (e3) {
+                        throw e3;
+                    }
                 }
             }
         }
@@ -1862,9 +1870,12 @@
         }
 
         async function fetchSuggestions(query, listId) {
+            // FIX: Removed proxy for Nominatim as it works directly and fails with proxy due to rate limits/blocking
             const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&viewbox=2.0,41.2,2.3,41.5&bounded=1`;
             try {
-                const data = await fetchWithProxy(url);
+                const response = await fetch(url);
+                if(!response.ok) throw new Error("Network error");
+                const data = await response.json();
                 renderSuggestions(data, listId);
             } catch (e) { console.error(e); }
         }
@@ -1913,12 +1924,15 @@
             loader.classList.remove('hidden');
 
             try {
+                // Also removed proxy here for fallback geocoding requests
                 if (!routeState.fromCoords) {
-                    const d = await fetchWithProxy(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fromStr + ', Barcelona')}&format=json&limit=1`);
+                    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fromStr + ', Barcelona')}&format=json&limit=1`);
+                    const d = await r.json();
                     if(d[0]) routeState.fromCoords = { lat: d[0].lat, lon: d[0].lon };
                 }
                 if (!routeState.toCoords) {
-                    const d = await fetchWithProxy(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(toStr + ', Barcelona')}&format=json&limit=1`);
+                    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(toStr + ', Barcelona')}&format=json&limit=1`);
+                    const d = await r.json();
                     if(d[0]) routeState.toCoords = { lat: d[0].lat, lon: d[0].lon };
                 }
 
