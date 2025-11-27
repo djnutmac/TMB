@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TMB Barcelona - Bus in Tempo Reale</title>
+    <title>TMB Barcelona - Bus & Percorsi</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -579,6 +579,148 @@
             text-align: center;
             margin-top: 12px;
         }
+
+        /* Route Styles */
+        .route-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .route-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .route-time {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #333;
+        }
+        .route-duration {
+            font-size: 0.9rem;
+            color: #666;
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .segment-detail {
+            margin-bottom: 12px;
+            position: relative;
+            padding-left: 20px;
+        }
+        .segment-detail:last-child {
+            margin-bottom: 0;
+        }
+        .segment-line-left {
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            bottom: -15px;
+            width: 2px;
+            background: #e0e0e0;
+        }
+        .segment-detail:last-child .segment-line-left {
+            display: none;
+        }
+        .segment-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .segment-dot-indicator {
+            position: absolute;
+            left: 0;
+            top: 6px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            border: 2px solid white;
+            box-shadow: 0 0 0 1px #ddd;
+        }
+        .segment-walk-info {
+            color: #666;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        .segment-bus-info {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #eee;
+        }
+        .stop-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+        .stop-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #999;
+            font-weight: 700;
+            margin-bottom: 1px;
+        }
+        .stop-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        .stop-code-pill {
+            background: #eee;
+            color: #666;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .map-container-route {
+            height: 200px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 12px;
+            border: 1px solid #ddd;
+            z-index: 1;
+        }
+
+        /* Autocomplete Styles */
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 50;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .suggestion-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .suggestion-item:hover {
+            background: #f9f9f9;
+            color: #dc0530;
+        }
     </style>
 </head>
 <body>
@@ -608,13 +750,21 @@
         </div>
         
         <!-- Tabs -->
-        <div class="flex bg-gray-200 rounded-none">
+        <div class="flex bg-gray-200 rounded-none overflow-x-auto">
             <button id="tabCerca" onclick="switchTab('cerca')" class="tab-btn active">
                 <span class="flex items-center justify-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                     <span class="hidden sm:inline">Cerca</span>
+                </span>
+            </button>
+            <button id="tabPercorso" onclick="switchTab('percorso')" class="tab-btn">
+                <span class="flex items-center justify-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                    <span class="hidden sm:inline">Percorso</span>
                 </span>
             </button>
             <button id="tabVicinanze" onclick="switchTab('vicinanze')" class="tab-btn">
@@ -729,6 +879,51 @@
                     <div class="text-red-500 text-3xl mb-2">⚠️</div>
                     <p id="errorText" class="text-gray-600 text-sm"></p>
                 </div>
+            </div>
+            
+            <!-- Tab Percorso -->
+            <div id="contentPercorso" class="content-padding hidden">
+                <div class="space-y-4 mb-4">
+                    <div class="relative">
+                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-semibold">PARTENZA</label>
+                        <div class="relative">
+                            <input type="text" id="routeFrom" placeholder="Cerca indirizzo o fermata..." 
+                                   class="input-modern pr-10" 
+                                   oninput="handleAddressInput(this, 'fromList')"
+                                   autocomplete="off">
+                            <button onclick="useMyLocationForRoute()" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 p-2" title="Usa la mia posizione">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="fromList" class="suggestions-list"></div>
+                    </div>
+                    
+                    <div class="relative">
+                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-semibold">DESTINAZIONE</label>
+                        <input type="text" id="routeTo" placeholder="Cerca destinazione..." 
+                               class="input-modern"
+                               oninput="handleAddressInput(this, 'toList')"
+                               autocomplete="off">
+                        <div id="toList" class="suggestions-list"></div>
+                    </div>
+                    
+                    <button onclick="calculateRoute()" class="btn-primary w-full flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                        </svg>
+                        Calcola Percorso (Bus)
+                    </button>
+                </div>
+                
+                <div id="routeLoading" class="hidden py-10 flex flex-col items-center">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-3 text-gray-500 text-sm">Ricerca percorso migliore...</p>
+                </div>
+                
+                <div id="routeResults" class="space-y-3"></div>
             </div>
             
             <!-- Tab Vicinanze -->
@@ -870,6 +1065,76 @@
         const API_KEY = 'e596d48164d007881b182b84bb3099bf';
         const BASE_URL = 'https://api.tmb.cat/v1';
         
+        // --- PROXY HELPER ---
+        async function fetchWithProxy(targetUrl) {
+            // Strategy 1: corsproxy.io (Generally fast and direct)
+            try {
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error(`Corsproxy error: ${response.status}`);
+                return await response.json();
+            } catch (e1) {
+                // Strategy 2: AllOrigins (Wrapped JSON)
+                try {
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                    const response = await fetch(proxyUrl);
+                    const data = await response.json();
+                    if (!data.contents) throw new Error("Risposta vuota dal proxy");
+                    try {
+                        return JSON.parse(data.contents);
+                    } catch (parseError) {
+                        throw new Error(`Proxy returned non-JSON`);
+                    }
+                } catch (e2) {
+                    throw e2;
+                }
+            }
+        }
+
+        // --- POLYLINE DECODER ---
+        function decodePolyline(str, precision) {
+            var index = 0,
+                lat = 0,
+                lng = 0,
+                coordinates = [],
+                shift = 0,
+                result = 0,
+                byte = null,
+                latitude_change,
+                longitude_change,
+                factor = Math.pow(10, precision || 5);
+
+            while (index < str.length) {
+                byte = null;
+                shift = 0;
+                result = 0;
+
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+
+                latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                shift = result = 0;
+
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+
+                longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+                lat += latitude_change;
+                lng += longitude_change;
+
+                coordinates.push([lat / factor, lng / factor]);
+            }
+
+            return coordinates;
+        }
+
         let allStops = [];
         let favorites = JSON.parse(localStorage.getItem('tmbFavorites')) || [];
         let currentStop = null;
@@ -903,7 +1168,7 @@
         
         // Tab switching
         function switchTab(tab) {
-            const tabs = ['cerca', 'vicinanze', 'preferiti', 'mappa', 'annunci'];
+            const tabs = ['cerca', 'percorso', 'vicinanze', 'preferiti', 'mappa', 'annunci'];
             tabs.forEach(t => {
                 const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
                 const content = document.getElementById('content' + t.charAt(0).toUpperCase() + t.slice(1));
@@ -967,8 +1232,7 @@
             
             try {
                 if (!silentRefresh) {
-                    const stopResponse = await fetch(`${BASE_URL}/transit/parades/${code}?app_id=${API_ID}&app_key=${API_KEY}`);
-                    const stopData = await stopResponse.json();
+                    const stopData = await fetchWithProxy(`${BASE_URL}/transit/parades/${code}?app_id=${API_ID}&app_key=${API_KEY}`);
                     
                     if (stopData.features && stopData.features.length > 0) {
                         const stop = stopData.features[0].properties;
@@ -982,8 +1246,7 @@
                     }
                 }
                 
-                const response = await fetch(`${BASE_URL}/ibus/stops/${code}?app_id=${API_ID}&app_key=${API_KEY}`);
-                const data = await response.json();
+                const data = await fetchWithProxy(`${BASE_URL}/ibus/stops/${code}?app_id=${API_ID}&app_key=${API_KEY}`);
                 
                 if (!silentRefresh) {
                     document.getElementById('loading').classList.add('hidden');
@@ -1134,8 +1397,7 @@
         // Load all stops
         async function loadAllStops() {
             try {
-                const response = await fetch(`${BASE_URL}/transit/parades?app_id=${API_ID}&app_key=${API_KEY}`);
-                const data = await response.json();
+                const data = await fetchWithProxy(`${BASE_URL}/transit/parades?app_id=${API_ID}&app_key=${API_KEY}`);
                 
                 if (data.features) {
                     allStops = data.features.map(f => ({
@@ -1251,22 +1513,15 @@
             document.getElementById('nearbyStopsList').innerHTML = '';
             document.getElementById('locationLoading').classList.remove('hidden');
             
-            // Check if we're in a secure context
-            if (!window.isSecureContext) {
-                showLocationError('La geolocalizzazione richiede una connessione sicura (HTTPS). Se stai aprendo il file localmente, prova a usare un server locale o caricalo online.');
-                return;
-            }
-            
             if (!navigator.geolocation) {
                 showLocationError('Il tuo browser non supporta la geolocalizzazione.');
                 return;
             }
             
-            // Try with less restrictive options first
             const geoOptions = {
                 enableHighAccuracy: false,
                 timeout: 15000,
-                maximumAge: 300000 // 5 minutes cache
+                maximumAge: 300000 
             };
             
             navigator.geolocation.getCurrentPosition(
@@ -1279,9 +1534,7 @@
                     showNearbyStops();
                 },
                 (error) => {
-                    // If low accuracy failed, try high accuracy
                     if (!geoOptions.enableHighAccuracy) {
-                        console.log('Trying with high accuracy...');
                         navigator.geolocation.getCurrentPosition(
                             (position) => {
                                 userLocation = {
@@ -1304,18 +1557,10 @@
         
         function handleGeoError(error) {
             let message = 'Errore nella geolocalizzazione.';
-            console.log('Geolocation error:', error.code, error.message);
-            
             switch(error.code) {
-                case 1: // PERMISSION_DENIED
-                    message = 'Permesso negato. Vai nelle impostazioni del browser > Impostazioni sito > Posizione e consenti l\'accesso per questo sito.';
-                    break;
-                case 2: // POSITION_UNAVAILABLE
-                    message = 'Posizione non disponibile. Assicurati che il GPS sia attivo.';
-                    break;
-                case 3: // TIMEOUT
-                    message = 'Timeout nella ricerca. Riprova in un\'area con migliore copertura GPS.';
-                    break;
+                case 1: message = 'Permesso negato. Abilita la posizione nel browser.'; break;
+                case 2: message = 'Posizione non disponibile.'; break;
+                case 3: message = 'Timeout nella ricerca.'; break;
             }
             showLocationError(message);
         }
@@ -1327,7 +1572,7 @@
         }
         
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Earth's radius in meters
+            const R = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -1338,9 +1583,7 @@
         }
         
         function formatDistance(meters) {
-            if (meters < 1000) {
-                return `${Math.round(meters)} m`;
-            }
+            if (meters < 1000) return `${Math.round(meters)} m`;
             return `${(meters / 1000).toFixed(1)} km`;
         }
         
@@ -1378,11 +1621,9 @@
         // Map functions
         function initMap() {
             map = L.map('map').setView([41.3851, 2.1734], 13);
-            
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
             }).addTo(map);
-            
             addStopMarkers();
         }
         
@@ -1393,16 +1634,11 @@
                 iconSize: [12, 12],
                 iconAnchor: [6, 6]
             });
-            
             allStops.forEach(stop => {
                 if (stop.lat && stop.lon) {
                     const marker = L.marker([stop.lat, stop.lon], { icon })
                         .addTo(map)
-                        .bindTooltip(stop.name, { 
-                            direction: 'top', 
-                            offset: [0, -8]
-                        });
-                    
+                        .bindTooltip(stop.name, { direction: 'top', offset: [0, -8] });
                     marker.on('click', () => selectStopOnMap(stop));
                     markers.push(marker);
                 }
@@ -1413,64 +1649,31 @@
             const btn = document.getElementById('mapLocationBtn');
             btn.classList.add('active');
             
-            // Check if we're in a secure context
-            if (!window.isSecureContext) {
-                alert('La geolocalizzazione richiede HTTPS. Carica la pagina su un server sicuro.');
-                btn.classList.remove('active');
-                return;
-            }
-            
             if (!navigator.geolocation) {
-                alert('Il tuo browser non supporta la geolocalizzazione.');
-                btn.classList.remove('active');
+                alert('Geolocalizzazione non supportata.');
                 return;
             }
-            
-            const showUserOnMap = (position) => {
-                userLocation = {
-                    lat: position.coords.latitude,
-                    lon: position.coords.longitude
-                };
-                
-                // Remove existing user marker
-                if (userMarker) {
-                    map.removeLayer(userMarker);
-                }
-                
-                // Add user marker
-                const userIcon = L.divIcon({
-                    className: 'user-location-marker',
-                    html: '<div class="user-marker-pulse"></div><div class="user-marker"></div>',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                });
-                
-                userMarker = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon })
-                    .addTo(map)
-                    .bindTooltip('La tua posizione', { direction: 'top', offset: [0, -10] });
-                
-                map.setView([userLocation.lat, userLocation.lon], 16);
-                btn.classList.remove('active');
-            };
             
             navigator.geolocation.getCurrentPosition(
-                showUserOnMap,
-                (error) => {
-                    // Try again with high accuracy if first attempt failed
-                    navigator.geolocation.getCurrentPosition(
-                        showUserOnMap,
-                        (err) => {
-                            btn.classList.remove('active');
-                            let msg = 'Impossibile ottenere la posizione.';
-                            if (err.code === 1) msg = 'Permesso negato. Abilita la posizione nelle impostazioni del browser.';
-                            else if (err.code === 2) msg = 'Posizione non disponibile. Attiva il GPS.';
-                            else if (err.code === 3) msg = 'Timeout. Riprova.';
-                            alert(msg);
-                        },
-                        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-                    );
+                (pos) => {
+                    userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                    if (userMarker) map.removeLayer(userMarker);
+                    
+                    const userIcon = L.divIcon({
+                        className: 'user-location-marker',
+                        html: '<div class="user-marker-pulse"></div><div class="user-marker"></div>',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+                    
+                    userMarker = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon })
+                        .addTo(map)
+                        .bindTooltip('La tua posizione', { direction: 'top', offset: [0, -10] });
+                    
+                    map.setView([userLocation.lat, userLocation.lon], 16);
+                    btn.classList.remove('active');
                 },
-                { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+                () => { alert('Errore posizione'); btn.classList.remove('active'); }
             );
         }
         
@@ -1479,17 +1682,11 @@
             document.getElementById('mapStopName').textContent = stop.name;
             document.getElementById('mapStopCode').textContent = `Codice: ${stop.code}`;
             document.getElementById('mapStopInfo').classList.remove('hidden');
-            
             try {
-                const response = await fetch(`${BASE_URL}/ibus/stops/${stop.code}?app_id=${API_ID}&app_key=${API_KEY}`);
-                const data = await response.json();
-                
+                const data = await fetchWithProxy(`${BASE_URL}/ibus/stops/${stop.code}?app_id=${API_ID}&app_key=${API_KEY}`);
+                // (Existing logic to display map bus results)
                 if (data.data && data.data.ibus && data.data.ibus.length > 0) {
-                    let buses = data.data.ibus
-                        .filter(bus => !bus.line.toUpperCase().startsWith('N'))
-                        .sort((a, b) => a['t-in-min'] - b['t-in-min'])
-                        .slice(0, 4);
-                    
+                    let buses = data.data.ibus.filter(bus => !bus.line.toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']).slice(0,4);
                     document.getElementById('mapBusResults').innerHTML = buses.map(bus => `
                         <div class="card-bus rounded-lg p-2 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
@@ -1497,46 +1694,25 @@
                                 <span class="text-xs text-gray-600 truncate">${bus.destination || ''}</span>
                             </div>
                             <div class="flex-shrink-0">${formatArrival(bus['t-in-min'])}</div>
-                        </div>
-                    `).join('');
+                        </div>`).join('');
                 } else {
-                    document.getElementById('mapBusResults').innerHTML = '<p class="text-gray-500 text-center py-2 text-sm">Nessun bus in arrivo</p>';
+                    document.getElementById('mapBusResults').innerHTML = '<p class="text-gray-500 text-center py-2 text-sm">Nessun bus</p>';
                 }
-            } catch (err) {
-                document.getElementById('mapBusResults').innerHTML = '<p class="text-red-500 text-center py-2 text-sm">Errore caricamento</p>';
+            } catch (e) {
+                document.getElementById('mapBusResults').innerHTML = '<p class="text-red-500 text-center py-2 text-sm">Errore</p>';
             }
         }
         
         function viewStopFromMap() {
-            if (selectedMapStop) {
-                switchTab('cerca');
-                document.getElementById('stopCode').value = selectedMapStop.code;
-                searchStop();
-            }
+            if (selectedMapStop) { switchTab('cerca'); document.getElementById('stopCode').value = selectedMapStop.code; searchStop(); }
         }
         
-        // Show current stop on map
         function showStopOnMap() {
             if (!currentStop) return;
-            
-            // Find stop coordinates
             const stop = allStops.find(s => s.code == currentStop.code);
-            if (!stop || !stop.lat || !stop.lon) {
-                alert('Coordinate della fermata non disponibili.');
-                return;
-            }
-            
-            // Switch to map tab
+            if (!stop) return alert('No coordinate');
             switchTab('mappa');
-            
-            // Wait for map to initialize if needed
-            setTimeout(() => {
-                // Center map on the stop with maximum zoom (19 is max for OpenStreetMap)
-                map.setView([stop.lat, stop.lon], 19);
-                
-                // Select the stop on the map to show info
-                selectStopOnMap(stop);
-            }, 200);
+            setTimeout(() => { map.setView([stop.lat, stop.lon], 19); selectStopOnMap(stop); }, 200);
         }
         
         // Alerts functions
@@ -1550,8 +1726,7 @@
             }
             
             try {
-                const response = await fetch(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`);
-                const data = await response.json();
+                const data = await fetchWithProxy(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`);
                 
                 if (!silent) {
                     document.getElementById('alertsLoading').classList.add('hidden');
@@ -1646,13 +1821,9 @@
             container.innerHTML = html;
         }
         
-        // Alerts auto-refresh every 10 minutes
         function startAlertsAutoRefresh() {
-            if (alertsRefreshInterval) return; // Already running
-            
-            alertsRefreshInterval = setInterval(() => {
-                loadAlerts(true); // Silent refresh
-            }, 600000); // 10 minutes = 600000ms
+            if (alertsRefreshInterval) return;
+            alertsRefreshInterval = setInterval(() => { loadAlerts(true); }, 600000);
         }
         
         // Show/hide alert badge
@@ -1667,7 +1838,6 @@
             hasNewAlerts = false;
         }
         
-        // Update switchTab to hide badge when viewing alerts
         const originalSwitchTab = switchTab;
         switchTab = function(tab) {
             originalSwitchTab(tab);
@@ -1675,16 +1845,227 @@
                 hideAlertBadge();
             }
         };
+
+        // --- ROUTE PLANNER ---
         
+        let routeState = { fromCoords: null, toCoords: null };
+        let debounceTimer;
+
+        function handleAddressInput(input, listId) {
+            clearTimeout(debounceTimer);
+            const query = input.value.trim();
+            const list = document.getElementById(listId);
+            if (listId === 'fromList') routeState.fromCoords = null;
+            if (listId === 'toList') routeState.toCoords = null;
+            if (query.length < 3) { list.style.display = 'none'; return; }
+            debounceTimer = setTimeout(() => fetchSuggestions(query, listId), 300);
+        }
+
+        async function fetchSuggestions(query, listId) {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&viewbox=2.0,41.2,2.3,41.5&bounded=1`;
+            try {
+                const data = await fetchWithProxy(url);
+                renderSuggestions(data, listId);
+            } catch (e) { console.error(e); }
+        }
+
+        function renderSuggestions(data, listId) {
+            const list = document.getElementById(listId);
+            list.innerHTML = '';
+            if (!data || data.length === 0) { list.style.display = 'none'; return; }
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = item.display_name.split(',').slice(0,3).join(',');
+                div.onclick = () => {
+                    const inputId = listId === 'fromList' ? 'routeFrom' : 'routeTo';
+                    document.getElementById(inputId).value = div.textContent;
+                    if(listId === 'fromList') routeState.fromCoords = { lat: item.lat, lon: item.lon };
+                    else routeState.toCoords = { lat: item.lat, lon: item.lon };
+                    list.style.display = 'none';
+                };
+                list.appendChild(div);
+            });
+            list.style.display = 'block';
+        }
+
+        function useMyLocationForRoute() {
+            if (!navigator.geolocation) return alert("No Geo");
+            document.getElementById('routeFrom').value = "Cercando...";
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    routeState.fromCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                    document.getElementById('routeFrom').value = "La mia posizione";
+                },
+                () => { alert("Errore posizione"); document.getElementById('routeFrom').value = ""; }
+            );
+        }
+
+        async function calculateRoute() {
+            const fromStr = document.getElementById('routeFrom').value;
+            const toStr = document.getElementById('routeTo').value;
+            const resultsDiv = document.getElementById('routeResults');
+            const loader = document.getElementById('routeLoading');
+
+            if (!fromStr || !toStr) return alert("Inserisci i dati");
+
+            resultsDiv.innerHTML = '';
+            loader.classList.remove('hidden');
+
+            try {
+                if (!routeState.fromCoords) {
+                    const d = await fetchWithProxy(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fromStr + ', Barcelona')}&format=json&limit=1`);
+                    if(d[0]) routeState.fromCoords = { lat: d[0].lat, lon: d[0].lon };
+                }
+                if (!routeState.toCoords) {
+                    const d = await fetchWithProxy(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(toStr + ', Barcelona')}&format=json&limit=1`);
+                    if(d[0]) routeState.toCoords = { lat: d[0].lat, lon: d[0].lon };
+                }
+
+                if (!routeState.fromCoords || !routeState.toCoords) throw new Error("Indirizzo non trovato");
+
+                const date = new Date();
+                const dateStr = `${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}-${date.getFullYear()}`;
+                const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+
+                const planUrl = `${BASE_URL}/planner/plan?fromPlace=${routeState.fromCoords.lat},${routeState.fromCoords.lon}&toPlace=${routeState.toCoords.lat},${routeState.toCoords.lon}&date=${dateStr}&time=${timeStr}&mode=BUS,WALK&app_id=${API_ID}&app_key=${API_KEY}`;
+                
+                const data = await fetchWithProxy(planUrl);
+                loader.classList.add('hidden');
+
+                if (data.plan && data.plan.itineraries && data.plan.itineraries.length > 0) {
+                    // Limit to top 3
+                    const topItineraries = data.plan.itineraries.slice(0, 3);
+                    
+                    topItineraries.forEach((itinerary, index) => {
+                        const duration = Math.round(itinerary.duration / 60);
+                        const startTime = new Date(itinerary.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        const endTime = new Date(itinerary.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        let segmentsHtml = '';
+                        let mapPolylines = [];
+
+                        itinerary.legs.forEach(leg => {
+                            // Collect geometry for map
+                            if (leg.legGeometry && leg.legGeometry.points) {
+                                let segColor = '#dc0530'; // Default Bus Red
+                                if (leg.mode === 'WALK') segColor = '#999';
+                                else if (leg.mode === 'SUBWAY') segColor = '#0066b3'; // Metro default
+                                // Try to deduce color from line name if routeColor is missing
+                                if (leg.mode === 'BUS') {
+                                    const lName = (leg.routeShortName || leg.route || '').toUpperCase();
+                                    if (lName.startsWith('V')) segColor = '#00a651'; // Green
+                                    else if (lName.startsWith('H')) segColor = '#0066b3'; // Blue
+                                    else if (lName.startsWith('D')) segColor = '#8e44ad'; // Purple
+                                }
+                                
+                                mapPolylines.push({
+                                    points: leg.legGeometry.points,
+                                    color: leg.routeColor ? `#${leg.routeColor}` : segColor
+                                });
+                            }
+
+                            if (leg.mode === 'WALK') {
+                                segmentsHtml += `
+                                    <div class="segment-detail">
+                                        <div class="segment-line-left"></div>
+                                        <div class="segment-dot-indicator" style="background:#fff;border-color:#ccc"></div>
+                                        <div class="segment-header">
+                                            <span class="segment-walk-info">🚶 Cammina ${Math.round(leg.duration/60)} min</span>
+                                        </div>
+                                    </div>`;
+                            } else if (leg.mode === 'BUS') {
+                                // FIX: Prefer routeShortName (e.g. "V3") over route (which might be "Zona Franca...")
+                                const lineNum = leg.routeShortName || leg.route;
+                                const lineClass = getLineClass(lineNum);
+                                
+                                segmentsHtml += `
+                                    <div class="segment-detail">
+                                        <div class="segment-line-left"></div>
+                                        <div class="segment-dot-indicator" style="background:#dc0530;border-color:#dc0530"></div>
+                                        <div class="segment-bus-info">
+                                            <div class="flex items-center gap-3 mb-3">
+                                                <div class="bus-badge ${lineClass}" style="font-size:1rem;padding:6px 10px;min-width:45px">${lineNum}</div>
+                                                <div class="text-xs text-gray-500 font-medium">Direz. ${leg.headsign}</div>
+                                            </div>
+                                            
+                                            <div class="stop-detail-row">
+                                                <div>
+                                                    <div class="stop-label">Sali a</div>
+                                                    <div class="stop-name">${leg.from.name}</div>
+                                                </div>
+                                                <div class="stop-code-pill">${leg.from.stopCode || ''}</div>
+                                            </div>
+                                            
+                                            <div class="text-center my-1">
+                                                <svg class="w-4 h-4 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                                            </div>
+
+                                            <div class="stop-detail-row">
+                                                <div>
+                                                    <div class="stop-label">Scendi a</div>
+                                                    <div class="stop-name">${leg.to.name}</div>
+                                                </div>
+                                                <div class="stop-code-pill">${leg.to.stopCode || ''}</div>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                            }
+                        });
+
+                        const mapId = `map-route-${index}`;
+                        
+                        resultsDiv.innerHTML += `
+                            <div class="route-card">
+                                <div class="route-summary">
+                                    <div class="route-time">${startTime} - ${endTime}</div>
+                                    <div class="route-duration">${duration} min</div>
+                                </div>
+                                <div class="pl-2">
+                                    ${segmentsHtml}
+                                </div>
+                                <div id="${mapId}" class="map-container-route"></div>
+                            </div>
+                        `;
+
+                        // Initialize Map for this result
+                        setTimeout(() => {
+                            const rMap = L.map(mapId, { zoomControl: false, attributionControl: false });
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(rMap);
+                            
+                            let bounds = [];
+                            mapPolylines.forEach(p => {
+                                const latlngs = decodePolyline(p.points);
+                                L.polyline(latlngs, { color: p.color, weight: 4 }).addTo(rMap);
+                                bounds = bounds.concat(latlngs);
+                            });
+                            
+                            if (bounds.length > 0) {
+                                rMap.fitBounds(bounds, { padding: [20, 20] });
+                            }
+                        }, 500); // Delay to ensure DOM is ready
+                    });
+
+                } else {
+                    resultsDiv.innerHTML = '<div class="card-bus p-4 text-center text-gray-500">Nessun percorso trovato.</div>';
+                }
+
+            } catch (e) {
+                console.error(e);
+                loader.classList.add('hidden');
+                resultsDiv.innerHTML = `<div class="card-bus p-4 text-center text-red-500">Errore: ${e.message}</div>`;
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             await loadAllStops();
             renderQuickFavorites();
-            
-            // Auto-load alerts on startup (silent)
-            setTimeout(() => {
-                loadAlerts(true);
-            }, 2000);
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.search-container') && !e.target.closest('.suggestions-list') && !e.target.closest('.input-modern')) {
+                    document.querySelectorAll('.suggestions-list').forEach(l => l.style.display = 'none');
+                }
+            });
         });
     </script>
 </body>
