@@ -494,92 +494,6 @@
             0% { transform: scale(0.5); opacity: 1; }
             100% { transform: scale(2); opacity: 0; }
         }
-        
-        .alert-card {
-            background: white;
-            border-left: 4px solid #ff9800;
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        
-        .alert-card.alert-warning {
-            border-left-color: #ff9800;
-        }
-        
-        .alert-card.alert-danger {
-            border-left-color: #dc0530;
-        }
-        
-        .alert-card.alert-info {
-            border-left-color: #0066b3;
-        }
-        
-        .alert-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .alert-badge.warning {
-            background: #fff3e0;
-            color: #e65100;
-        }
-        
-        .alert-badge.danger {
-            background: #ffebee;
-            color: #c62828;
-        }
-        
-        .alert-badge.info {
-            background: #e3f2fd;
-            color: #1565c0;
-        }
-        
-        .alert-lines {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
-        }
-        
-        .alert-line-chip {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: #f5f5f5;
-            color: #333;
-        }
-        
-        .alert-notification-badge {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 12px;
-            height: 12px;
-            background: #dc0530;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            animation: pulse-badge 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse-badge {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
-        
-        .alert-last-update {
-            font-size: 0.7rem;
-            color: #999;
-            text-align: center;
-            margin-top: 12px;
-        }
 
         /* Route Styles */
         .route-card {
@@ -750,7 +664,7 @@
             </div>
         </div>
         
-        <!-- Tabs (ORDINE: Cerca - Percorso - Vicinanze - Mappa - Annunci - Preferiti) -->
+        <!-- Tabs (ORDINE: Cerca - Percorso - Vicinanze - Mappa - Preferiti) -->
         <div class="flex bg-gray-200 rounded-none overflow-x-auto">
             
             <button id="tabCerca" onclick="switchTab('cerca')" class="tab-btn active">
@@ -788,18 +702,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
                     </svg>
                     <span class="hidden sm:inline">Mappa</span>
-                </span>
-            </button>
-
-            <button id="tabAnnunci" onclick="switchTab('annunci')" class="tab-btn">
-                <span class="flex items-center justify-center gap-1 relative">
-                    <span class="relative">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        <span id="alertBadge" class="alert-notification-badge hidden"></span>
-                    </span>
-                    <span class="hidden sm:inline">Annunci</span>
                 </span>
             </button>
 
@@ -1023,44 +925,6 @@
                 </div>
             </div>
             
-            <!-- Tab Annunci -->
-            <div id="contentAnnunci" class="content-padding hidden">
-                <div class="mb-4">
-                    <button onclick="loadAlerts()" class="btn-primary w-full flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Aggiorna Annunci
-                    </button>
-                </div>
-                
-                <!-- Alerts Loading -->
-                <div id="alertsLoading" class="hidden py-10 flex flex-col items-center">
-                    <div class="loading-spinner"></div>
-                    <p class="mt-3 text-gray-500 text-sm">Caricamento annunci...</p>
-                </div>
-                
-                <!-- Alerts Error -->
-                <div id="alertsError" class="hidden card-bus p-4 text-center rounded-xl">
-                    <div class="text-orange-500 text-3xl mb-2">📢</div>
-                    <p id="alertsErrorText" class="text-gray-600 text-sm"></p>
-                </div>
-                
-                <!-- Alerts List -->
-                <div id="alertsList"></div>
-                
-                <!-- No Alerts -->
-                <div id="noAlerts" class="hidden text-center py-10">
-                    <div class="text-5xl mb-4">✅</div>
-                    <p class="text-gray-500 text-sm">Nessun avviso attivo al momento.<br>Il servizio è regolare.</p>
-                </div>
-                
-                <!-- Initial Message -->
-                <div id="alertsInitial" class="text-center py-10">
-                    <div class="text-5xl mb-4">📢</div>
-                    <p class="text-gray-500 text-sm">Clicca il pulsante per caricare<br>gli avvisi di servizio</p>
-                </div>
-            </div>
         </div>
         
         <!-- Footer -->
@@ -1166,10 +1030,6 @@
         let lastSearchedCode = null;
         let userLocation = null;
         let userMarker = null;
-        let alertsRefreshInterval = null;
-        let lastAlerts = JSON.parse(localStorage.getItem('tmbLastAlerts')) || [];
-        let alertsLastUpdate = null;
-        let hasNewAlerts = false;
         
         // Update time
         function updateDateTime() {
@@ -1189,8 +1049,8 @@
         
         // Tab switching
         function switchTab(tab) {
-            // New order: Cerca - Percorso - Vicinanze - Mappa - Annunci - Preferiti
-            const tabs = ['cerca', 'percorso', 'vicinanze', 'mappa', 'annunci', 'preferiti'];
+            // New order: Cerca - Percorso - Vicinanze - Mappa - Preferiti
+            const tabs = ['cerca', 'percorso', 'vicinanze', 'mappa', 'preferiti'];
             tabs.forEach(t => {
                 const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
                 const content = document.getElementById('content' + t.charAt(0).toUpperCase() + t.slice(1));
@@ -1738,195 +1598,6 @@
             switchTab('mappa');
             setTimeout(() => { map.setView([stop.lat, stop.lon], 19); selectStopOnMap(stop); }, 200);
         }
-        
-        // Alerts functions
-        async function loadAlerts(silent = false) {
-            if (!silent) {
-                document.getElementById('alertsInitial').classList.add('hidden');
-                document.getElementById('alertsError').classList.add('hidden');
-                document.getElementById('noAlerts').classList.add('hidden');
-                document.getElementById('alertsList').innerHTML = '';
-                document.getElementById('alertsLoading').classList.remove('hidden');
-            }
-            
-            try {
-                // STRATEGY: DOUBLE FETCH (Interruzioni + Stato Linee Bus)
-                // Questo è cruciale perché a volte 'interrupcions' è vuoto ma ci sono 'incidenze' nelle linee
-                
-                const results = await Promise.allSettled([
-                    fetchWithProxy(`${BASE_URL}/transit/linies/interrupcions?app_id=${API_ID}&app_key=${API_KEY}`),
-                    fetchWithProxy(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`)
-                ]);
-
-                const interrupcionsResult = results[0];
-                const busResult = results[1];
-
-                // Se entrambi falliscono, lancia errore
-                if (interrupcionsResult.status === 'rejected' && busResult.status === 'rejected') {
-                    throw new Error("Impossibile contattare i servizi TMB");
-                }
-                
-                if (!silent) {
-                    document.getElementById('alertsLoading').classList.add('hidden');
-                }
-                
-                let alerts = [];
-                const addedAlertIds = new Set(); // Per evitare duplicati
-                
-                // 1. Process Interrupcions (Grandi avvisi)
-                if (interrupcionsResult.status === 'fulfilled' && interrupcionsResult.value && interrupcionsResult.value.features) {
-                    interrupcionsResult.value.features.forEach(feature => {
-                        if (feature.properties) {
-                            const p = feature.properties;
-                            const id = p.CODI_INTERRUPCIO || Math.random().toString();
-                            
-                            // Salta se duplicato (raro qui, ma buono per sicurezza)
-                            if (addedAlertIds.has(id)) return;
-                            addedAlertIds.add(id);
-                            
-                            let lines = [];
-                            if (p.LINIES) {
-                                lines = p.LINIES.split(',').map(l => l.trim()).filter(l => l.length > 0);
-                            }
-                            
-                            alerts.push({
-                                id: id,
-                                type: 'danger', // Interruzioni sono spesso gravi
-                                title: p.CAUSA || 'Interruzione Servizio',
-                                description: p.DESC_INTERRUPCIO || 'Nessun dettaglio.',
-                                lines: lines,
-                                date: p.DATA_INI
-                            });
-                        }
-                    });
-                }
-                
-                // 2. Process Bus Lines (Incidenze minori)
-                if (busResult.status === 'fulfilled' && busResult.value && busResult.value.features) {
-                    busResult.value.features.forEach(feature => {
-                        if (feature.properties) {
-                            const p = feature.properties;
-                            
-                            // Se lo stato NON è operativa, è un avviso
-                            if (p.ESTAT && p.ESTAT !== 'OPERATIVA') {
-                                const lineCode = p.NOM_LINIA || p.CODI_LINIA;
-                                
-                                alerts.push({
-                                    id: `incidenza-${p.CODI_LINIA}`,
-                                    type: 'warning',
-                                    title: `Linea ${lineCode}`,
-                                    description: `Stato attuale: ${p.ESTAT} - ${p.DESC_ESTAT || p.DESC_LINIA || ''}`,
-                                    lines: [lineCode],
-                                    date: null
-                                });
-                            }
-                        }
-                    });
-                }
-                
-                // Sort alerts: Danger first, then Warning
-                alerts.sort((a, b) => {
-                    if (a.type === 'danger' && b.type !== 'danger') return -1;
-                    if (a.type !== 'danger' && b.type === 'danger') return 1;
-                    return 0;
-                });
-                
-                // Check for new alerts logic
-                const currentAlertIds = alerts.map(a => a.id).sort().join(',');
-                const lastAlertIds = lastAlerts.map(a => a.id).sort().join(',');
-                
-                if (currentAlertIds !== lastAlertIds && lastAlerts.length > 0) {
-                    hasNewAlerts = true;
-                    showAlertBadge();
-                }
-                
-                lastAlerts = alerts;
-                localStorage.setItem('tmbLastAlerts', JSON.stringify(alerts));
-                
-                alertsLastUpdate = new Date();
-                
-                if (alerts.length === 0) {
-                    if (!silent) {
-                        document.getElementById('noAlerts').classList.remove('hidden');
-                    }
-                } else {
-                    renderAlerts(alerts, silent);
-                }
-                
-                startAlertsAutoRefresh();
-                
-            } catch (err) {
-                if (!silent) {
-                    document.getElementById('alertsLoading').classList.add('hidden');
-                    document.getElementById('alertsErrorText').textContent = 'Impossibile caricare gli annunci. Riprova più tardi.';
-                    document.getElementById('alertsError').classList.remove('hidden');
-                }
-                console.error('Errore caricamento alerts:', err);
-            }
-        }
-        
-        function renderAlerts(alerts, silent = false) {
-            const container = document.getElementById('alertsList');
-            
-            let html = alerts.map((alert, index) => {
-                const typeClass = alert.type === 'danger' ? 'alert-danger' : 'alert-warning';
-                const badgeClass = alert.type === 'danger' ? 'danger' : 'warning';
-                const typeLabel = alert.type === 'danger' ? 'Interruzione' : 'Avviso';
-                
-                // Formatta la data se presente
-                let dateStr = '';
-                if (alert.date) {
-                    dateStr = `<div class="text-xs text-gray-400 mt-1 mb-2">Dal: ${alert.date}</div>`;
-                }
-
-                return `
-                    <div class="alert-card ${typeClass} ${silent ? '' : 'fade-in'}" style="${silent ? '' : 'animation-delay: ' + (index * 0.1) + 's'}">
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <h4 class="font-bold text-gray-800 text-sm">${alert.title}</h4>
-                            <span class="alert-badge ${badgeClass}">${typeLabel}</span>
-                        </div>
-                        ${dateStr}
-                        <p class="text-gray-600 text-sm leading-relaxed">${alert.description}</p>
-                        ${alert.lines && alert.lines.length > 0 ? `
-                            <div class="alert-lines">
-                                ${alert.lines.map(line => `<span class="alert-line-chip">${line}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-            
-            if (alertsLastUpdate) {
-                html += `<p class="alert-last-update">Ultimo aggiornamento: ${alertsLastUpdate.toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})} • Prossimo aggiornamento tra 10 min</p>`;
-            }
-            
-            container.innerHTML = html;
-        }
-        
-        function startAlertsAutoRefresh() {
-            if (alertsRefreshInterval) return;
-            alertsRefreshInterval = setInterval(() => { loadAlerts(true); }, 600000);
-        }
-        
-        // Show/hide alert badge
-        function showAlertBadge() {
-            const badge = document.getElementById('alertBadge');
-            badge.classList.remove('hidden');
-        }
-        
-        function hideAlertBadge() {
-            const badge = document.getElementById('alertBadge');
-            badge.classList.add('hidden');
-            hasNewAlerts = false;
-        }
-        
-        const originalSwitchTab = switchTab;
-        switchTab = function(tab) {
-            originalSwitchTab(tab);
-            if (tab === 'annunci') {
-                hideAlertBadge();
-            }
-        };
 
         // --- ROUTE PLANNER ---
         
