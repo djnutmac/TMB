@@ -1074,18 +1074,21 @@
         const API_KEY = 'e596d48164d007881b182b84bb3099bf';
         const BASE_URL = 'https://api.tmb.cat/v1';
         
-        // --- PROXY HELPER ---
+        // --- PROXY HELPER WITH ROUND-ROBIN ---
         async function fetchWithProxy(targetUrl) {
             const proxies = [
                 {
+                    // Strategy 1: AllOrigins (Wrapped JSON) - often reliable
                     url: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&disableCache=true`,
                     extract: (data) => JSON.parse(data.contents)
                 },
                 {
+                    // Strategy 2: CodeTabs - direct proxy
                     url: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
                     extract: (data) => data
                 },
                 {
+                    // Strategy 3: CorsProxy.io - direct proxy
                     url: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
                     extract: (data) => data
                 }
@@ -1098,10 +1101,12 @@
                     const response = await fetch(proxy.url(targetUrl));
                     if (!response.ok) throw new Error(`Status ${response.status}`);
                     const data = await response.json();
-                    return proxy.extract(data);
+                    const result = proxy.extract(data);
+                    return result; // Return immediately on success
                 } catch (e) {
                     console.warn(`Proxy failed: ${proxy.url(targetUrl).split('?')[0]}`, e);
                     lastError = e;
+                    // Continue to next proxy
                 }
             }
             throw lastError || new Error("All proxies failed");
@@ -1745,30 +1750,42 @@
             }
             
             try {
-                // FIXED: Utilizzo dell'endpoint corretto per le interruzioni dettagliate
-                const data = await fetchWithProxy(`${BASE_URL}/transit/linies/interrupcions?app_id=${API_ID}&app_key=${API_KEY}`);
+                // STRATEGY: DOUBLE FETCH (Interruzioni + Stato Linee Bus)
+                // Questo è cruciale perché a volte 'interrupcions' è vuoto ma ci sono 'incidenze' nelle linee
+                
+                const [dataInterrupcions, dataBus] = await Promise.all([
+                    fetchWithProxy(`${BASE_URL}/transit/linies/interrupcions?app_id=${API_ID}&app_key=${API_KEY}`),
+                    fetchWithProxy(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`)
+                ]);
                 
                 if (!silent) {
                     document.getElementById('alertsLoading').classList.add('hidden');
                 }
                 
                 let alerts = [];
+                const addedAlertIds = new Set(); // Per evitare duplicati
                 
-                if (data.features) {
-                    data.features.forEach(feature => {
+                // 1. Process Interrupcions (Grandi avvisi)
+                if (dataInterrupcions && dataInterrupcions.features) {
+                    dataInterrupcions.features.forEach(feature => {
                         if (feature.properties) {
                             const p = feature.properties;
-                            // Parsing delle linee coinvolte (spesso è una stringa separata da virgole)
+                            const id = p.CODI_INTERRUPCIO || Math.random().toString();
+                            
+                            // Salta se duplicato (raro qui, ma buono per sicurezza)
+                            if (addedAlertIds.has(id)) return;
+                            addedAlertIds.add(id);
+                            
                             let lines = [];
                             if (p.LINIES) {
                                 lines = p.LINIES.split(',').map(l => l.trim()).filter(l => l.length > 0);
                             }
                             
                             alerts.push({
-                                id: p.CODI_INTERRUPCIO || Math.random().toString(), // ID unico
-                                type: 'warning', // Le interruzioni sono quasi sempre warning o danger
-                                title: p.CAUSA || 'Avviso di Servizio',
-                                description: p.DESC_INTERRUPCIO || 'Nessuna descrizione disponibile.',
+                                id: id,
+                                type: 'danger', // Interruzioni sono spesso gravi
+                                title: p.CAUSA || 'Interruzione Servizio',
+                                description: p.DESC_INTERRUPCIO || 'Nessun dettaglio.',
                                 lines: lines,
                                 date: p.DATA_INI
                             });
@@ -1776,7 +1793,40 @@
                     });
                 }
                 
-                // Check for new alerts
+                // 2. Process Bus Lines (Incidenze minori)
+                if (dataBus && dataBus.features) {
+                    dataBus.features.forEach(feature => {
+                        if (feature.properties) {
+                            const p = feature.properties;
+                            
+                            // Se lo stato NON è operativa, è un avviso
+                            if (p.ESTAT && p.ESTAT !== 'OPERATIVA') {
+                                // Creiamo un ID basato sulla linea per evitare duplicati se l'abbiamo già preso dalle interruzioni
+                                // (Anche se le interruzioni hanno ID diversi, meglio mostrare info extra)
+                                
+                                const lineCode = p.NOM_LINIA || p.CODI_LINIA;
+                                
+                                alerts.push({
+                                    id: `incidenza-${p.CODI_LINIA}`,
+                                    type: 'warning',
+                                    title: `Linea ${lineCode}`,
+                                    description: `Stato attuale: ${p.ESTAT} - ${p.DESC_ESTAT || p.DESC_LINIA || ''}`,
+                                    lines: [lineCode],
+                                    date: null
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                // Sort alerts: Danger first, then Warning
+                alerts.sort((a, b) => {
+                    if (a.type === 'danger' && b.type !== 'danger') return -1;
+                    if (a.type !== 'danger' && b.type === 'danger') return 1;
+                    return 0;
+                });
+                
+                // Check for new alerts logic
                 const currentAlertIds = alerts.map(a => a.id).sort().join(',');
                 const lastAlertIds = lastAlerts.map(a => a.id).sort().join(',');
                 
@@ -1814,9 +1864,9 @@
             const container = document.getElementById('alertsList');
             
             let html = alerts.map((alert, index) => {
-                const typeClass = 'alert-warning';
-                const badgeClass = 'warning';
-                const typeLabel = 'Avviso';
+                const typeClass = alert.type === 'danger' ? 'alert-danger' : 'alert-warning';
+                const badgeClass = alert.type === 'danger' ? 'danger' : 'warning';
+                const typeLabel = alert.type === 'danger' ? 'Interruzione' : 'Avviso';
                 
                 // Formatta la data se presente
                 let dateStr = '';
