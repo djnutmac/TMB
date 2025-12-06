@@ -1599,50 +1599,124 @@
         
         let routeState = { fromCoords: null, toCoords: null };
         let debounceTimer;
+        let abortController = null; // Per cancellare richieste vecchie
+        const suggestionCache = new Map(); // Cache semplice
 
         function handleAddressInput(input, listId) {
             clearTimeout(debounceTimer);
             const query = input.value.trim();
             const list = document.getElementById(listId);
+            
+            // Reset coords se l'utente modifica
             if (listId === 'fromList') routeState.fromCoords = null;
             if (listId === 'toList') routeState.toCoords = null;
-            if (query.length < 3) { list.style.display = 'none'; return; }
-            debounceTimer = setTimeout(() => fetchSuggestions(query, listId), 300);
+
+            if (query.length < 3) { 
+                list.style.display = 'none'; 
+                return; 
+            }
+
+            // 1. RICERCA LOCALE IMMEDIATA (Fermate)
+            // Filtra le fermate già caricate in memoria (molto veloce)
+            const localResults = searchLocalStops(query);
+            renderMixedSuggestions(localResults, [], listId); // Mostra subito i risultati locali
+
+            // 2. RICERCA REMOTA (Indirizzi) - Debounced
+            debounceTimer = setTimeout(() => {
+                fetchSuggestions(query, listId, localResults);
+            }, 500); // Aumentato a 500ms per ridurre carico
         }
 
-        async function fetchSuggestions(query, listId) {
-            // Add Barcelona context and limit to 5 results
+        function searchLocalStops(query) {
+            if (!allStops || allStops.length === 0) return [];
+            const q = query.toLowerCase();
+            return allStops
+                .filter(s => s.name.toLowerCase().includes(q) || s.code.toString().startsWith(q))
+                .slice(0, 3) // Prendi solo le prime 3
+                .map(s => ({
+                    type: 'stop',
+                    display_name: `${s.name} (Fermata ${s.code})`,
+                    lat: s.lat,
+                    lon: s.lon,
+                    code: s.code
+                }));
+        }
+
+        async function fetchSuggestions(query, listId, localResults) {
+            // Se c'è una richiesta pendente (via controller), annullala logicamente
+            if (abortController) {
+                abortController.abort();
+            }
+            abortController = new AbortController();
+            const currentSignal = abortController.signal;
+
+            // Controllo Cache
+            if (suggestionCache.has(query)) {
+                renderMixedSuggestions(localResults, suggestionCache.get(query), listId);
+                return;
+            }
+            
             const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&viewbox=2.0,41.2,2.3,41.5&bounded=1`;
             
             try {
-                // FIXED: Use fetchWithProxy to avoid CORS issues
+                // Nota: fetchWithProxy non supporta signal nativo perché usa servizi esterni, 
+                // ma controlliamo il segnale DOPO aver ricevuto la risposta.
                 const data = await fetchWithProxy(url);
-                renderSuggestions(data, listId);
+                
+                if (currentSignal.aborted) return; // Ignora risultati vecchi se l'utente ha continuato a scrivere
+
+                suggestionCache.set(query, data); // Salva in cache
+                renderMixedSuggestions(localResults, data, listId);
+                
             } catch (e) {
-                console.error("Autocomplete error", e);
+                if (!currentSignal.aborted) {
+                    console.error("Autocomplete error", e);
+                }
             }
         }
 
-        function renderSuggestions(data, listId) {
+        function renderMixedSuggestions(localData, remoteData, listId) {
             const list = document.getElementById(listId);
             list.innerHTML = '';
             
-            if (!data || data.length === 0) {
-                list.style.display = 'none';
+            const combined = [...localData];
+            
+            // Aggiungi risultati remoti
+            if (remoteData && remoteData.length > 0) {
+                remoteData.forEach(item => {
+                    combined.push({
+                        type: 'address',
+                        display_name: item.display_name,
+                        lat: item.lat,
+                        lon: item.lon
+                    });
+                });
+            }
+
+            if (combined.length === 0) {
+                if (list.innerHTML === '') list.style.display = 'none';
                 return;
             }
 
-            data.forEach(item => {
+            combined.slice(0, 8).forEach(item => { // Max 8 risultati totali
                 const div = document.createElement('div');
                 div.className = 'suggestion-item';
-                // Simplify display name (take first 3 parts usually)
-                const simpleName = item.display_name.split(',').slice(0, 3).join(',');
-                div.textContent = simpleName;
+                
+                // Icona diversa per fermata vs indirizzo
+                const icon = item.type === 'stop' ? '🚏' : '📍';
+                
+                // Semplifica nome indirizzo
+                let displayName = item.display_name;
+                if (item.type === 'address') {
+                    displayName = item.display_name.split(',').slice(0, 3).join(',');
+                }
+
+                div.innerHTML = `<span class="mr-2">${icon}</span> ${displayName}`;
                 
                 div.onclick = () => {
                     const inputId = listId === 'fromList' ? 'routeFrom' : 'routeTo';
                     const input = document.getElementById(inputId);
-                    input.value = simpleName;
+                    input.value = displayName; // Usa il nome pulito
                     
                     // Store coordinates
                     if (listId === 'fromList') {
@@ -1745,19 +1819,25 @@
                             // Collect geometry for map
                             if (leg.legGeometry && leg.legGeometry.points) {
                                 let segColor = '#dc0530'; // Default Bus Red
+                                let isCustomColor = false; // Flag per dare priorità al nostro colore
+
                                 if (leg.mode === 'WALK') segColor = '#999';
                                 else if (leg.mode === 'SUBWAY') segColor = '#0066b3'; // Metro default
+                                
                                 // Try to deduce color from line name if routeColor is missing
                                 if (leg.mode === 'BUS') {
                                     const lName = (leg.routeShortName || leg.route || '').toUpperCase();
-                                    if (lName.startsWith('V')) segColor = '#00a651'; // Green
-                                    else if (lName.startsWith('H')) segColor = '#003888'; // Blue (Updated)
-                                    else if (lName.startsWith('D')) segColor = '#8e44ad'; // Purple
+                                    if (lName.startsWith('V')) { segColor = '#00a651'; isCustomColor = true; } // Green
+                                    else if (lName.startsWith('H')) { segColor = '#003888'; isCustomColor = true; } // Blue (Forced)
+                                    else if (lName.startsWith('D')) { segColor = '#8e44ad'; isCustomColor = true; } // Purple
                                 }
                                 
+                                // Usa il colore API solo se NON abbiamo settato un colore personalizzato specifico
+                                const finalColor = (leg.routeColor && !isCustomColor) ? `#${leg.routeColor}` : segColor;
+
                                 mapPolylines.push({
                                     points: leg.legGeometry.points,
-                                    color: leg.routeColor ? `#${leg.routeColor}` : segColor
+                                    color: finalColor
                                 });
                             }
 
