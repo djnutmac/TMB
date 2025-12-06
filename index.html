@@ -250,16 +250,11 @@
         .tram { background: #00a651; color: white; }
         
         #map { 
-            height: 300px; 
             width: 100%; 
+            aspect-ratio: 1 / 1;
+            height: auto;
             border-radius: 12px;
             border: 1px solid #e0e0e0;
-        }
-        
-        @media (min-width: 640px) {
-            #map {
-                height: 400px;
-            }
         }
         
         .stop-item {
@@ -598,8 +593,9 @@
             font-weight: 600;
         }
         .map-container-route {
-            height: 200px;
             width: 100%;
+            aspect-ratio: 1 / 1;
+            height: auto;
             border-radius: 8px;
             margin-top: 12px;
             border: 1px solid #ddd;
