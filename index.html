@@ -740,7 +740,7 @@
                     </div>
                     <div>
                         <h1 class="text-base sm:text-xl font-bold text-gray-800 tracking-tight">TMB Barcelona</h1>
-                        <p class="text-gray-500 text-xs sm:text-sm">Bus in Tempo Reale - v3.0</p>
+                        <p class="text-gray-500 text-xs sm:text-sm">Bus in Tempo Reale - v4.0</p>
                     </div>
                 </div>
                 <div class="text-right flex-shrink-0">
@@ -1055,6 +1055,9 @@
                     <p class="text-gray-500 text-sm">Nessun avviso attivo al momento.<br>Il servizio è regolare.</p>
                 </div>
                 
+                <!-- Diagnostic Stats (Visible to user to debug) -->
+                <div id="alertStats" class="text-center text-xs text-gray-400 mt-4"></div>
+
                 <!-- Initial Message -->
                 <div id="alertsInitial" class="text-center py-10">
                     <div class="text-5xl mb-4">📢</div>
@@ -1066,7 +1069,7 @@
         
         <!-- Footer -->
         <div class="text-center text-gray-400 text-xs mt-4 pb-3">
-            Dati forniti da TMB Barcelona - v3.0
+            Dati forniti da TMB Barcelona - v4.0
         </div>
     </div>
 
@@ -1744,7 +1747,7 @@
             setTimeout(() => { map.setView([stop.lat, stop.lon], 19); selectStopOnMap(stop); }, 200);
         }
         
-        // Alerts functions (NEW V3.0)
+        // Alerts functions (NEW V4.0 - AGGRESSIVE CHECKING)
         async function loadAlerts(silent = false) {
             if (!silent) {
                 document.getElementById('alertsInitial').classList.add('hidden');
@@ -1752,33 +1755,35 @@
                 document.getElementById('noAlerts').classList.add('hidden');
                 document.getElementById('alertsList').innerHTML = '';
                 document.getElementById('alertsLoading').classList.remove('hidden');
+                document.getElementById('alertStats').textContent = 'Caricamento...';
             }
             
             try {
-                // STRATEGY: DOUBLE FETCH (Interruzioni + Stato Linee Bus)
-                // Usiamo Promise.allSettled per non bloccare tutto se una delle due fallisce
-                
+                // STRATEGY: TRIPLE FETCH (Interruzioni + Bus + Metro per verifica)
                 const results = await Promise.allSettled([
                     fetchWithProxy(`${BASE_URL}/transit/linies/interrupcions?app_id=${API_ID}&app_key=${API_KEY}`),
-                    fetchWithProxy(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`)
+                    fetchWithProxy(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`),
+                    fetchWithProxy(`${BASE_URL}/transit/linies/metro?app_id=${API_ID}&app_key=${API_KEY}`) // Aggiunto per debug
                 ]);
 
                 const interrupcionsResult = results[0];
                 const busResult = results[1];
+                const metroResult = results[2];
 
-                // Se entrambe falliscono, lanciamo errore
-                if (interrupcionsResult.status === 'rejected' && busResult.status === 'rejected') {
-                    throw new Error("Impossibile contattare i servizi TMB");
-                }
-                
                 if (!silent) {
                     document.getElementById('alertsLoading').classList.add('hidden');
                 }
                 
                 let alerts = [];
-                const addedAlertIds = new Set(); // Per evitare duplicati
+                const addedAlertIds = new Set();
                 
-                // 1. Process Interrupcions (Grandi avvisi)
+                let stats = {
+                    interrupcions: (interrupcionsResult.status === 'fulfilled' && interrupcionsResult.value.features) ? interrupcionsResult.value.features.length : 0,
+                    busLines: (busResult.status === 'fulfilled' && busResult.value.features) ? busResult.value.features.length : 0,
+                    metroLines: (metroResult.status === 'fulfilled' && metroResult.value.features) ? metroResult.value.features.length : 0
+                };
+
+                // 1. Process Interrupcions (Major disruptions)
                 if (interrupcionsResult.status === 'fulfilled' && interrupcionsResult.value && interrupcionsResult.value.features) {
                     interrupcionsResult.value.features.forEach(feature => {
                         if (feature.properties) {
@@ -1789,13 +1794,11 @@
                             addedAlertIds.add(id);
                             
                             let lines = [];
-                            if (p.LINIES) {
-                                lines = p.LINIES.split(',').map(l => l.trim()).filter(l => l.length > 0);
-                            }
+                            if (p.LINIES) lines = p.LINIES.split(',').map(l => l.trim()).filter(l => l.length > 0);
                             
                             alerts.push({
                                 id: id,
-                                type: 'danger', // Interruzioni sono spesso gravi
+                                type: 'danger',
                                 title: p.CAUSA || 'Interruzione Servizio',
                                 description: p.DESC_INTERRUPCIO || 'Nessun dettaglio.',
                                 lines: lines,
@@ -1805,21 +1808,54 @@
                     });
                 }
                 
-                // 2. Process Bus Lines (Incidenze minori)
+                // 2. Process Bus Lines (Minor incidents & warnings)
                 if (busResult.status === 'fulfilled' && busResult.value && busResult.value.features) {
                     busResult.value.features.forEach(feature => {
                         if (feature.properties) {
                             const p = feature.properties;
                             
-                            // Se lo stato NON è operativa, è un avviso
-                            if (p.ESTAT && p.ESTAT !== 'OPERATIVA') {
+                            // Check VERY aggressively for any warning sign
+                            const hasStatus = p.ESTAT && p.ESTAT !== 'OPERATIVA';
+                            const hasIncidents = p.INCIDENCIES === true || p.INCIDENCIES === "true"; // Sometimes boolean, sometimes string
+                            const hasNotes = p.NOTES && p.NOTES.trim().length > 0;
+                            const hasDesc = p.DESC_ESTAT && p.DESC_ESTAT.trim().length > 0 && p.DESC_ESTAT !== 'Normal'; // Check for description
+
+                            if (hasStatus || hasIncidents || hasNotes || hasDesc) {
                                 const lineCode = p.NOM_LINIA || p.CODI_LINIA;
                                 
+                                // Build description from available fields
+                                let desc = '';
+                                if (p.DESC_ESTAT) desc += p.DESC_ESTAT + '. ';
+                                if (p.NOTES) desc += p.NOTES + '. ';
+                                if (p.OBSERVACIONS) desc += p.OBSERVACIONS;
+                                
+                                if (desc.trim() === '') desc = `Stato: ${p.ESTAT}`;
+
                                 alerts.push({
-                                    id: `incidenza-${p.CODI_LINIA}`,
+                                    id: `incidenza-bus-${p.CODI_LINIA}`,
                                     type: 'warning',
                                     title: `Linea ${lineCode}`,
-                                    description: `Stato attuale: ${p.ESTAT} - ${p.DESC_ESTAT || p.DESC_LINIA || ''}`,
+                                    description: desc,
+                                    lines: [lineCode],
+                                    date: null
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // 3. Process Metro Lines (Just to verify system works)
+                if (metroResult.status === 'fulfilled' && metroResult.value && metroResult.value.features) {
+                    metroResult.value.features.forEach(feature => {
+                        if (feature.properties) {
+                            const p = feature.properties;
+                            if (p.ESTAT && p.ESTAT !== 'OPERATIVA') {
+                                const lineCode = p.NOM_LINIA || p.CODI_LINIA;
+                                alerts.push({
+                                    id: `incidenza-metro-${p.CODI_LINIA}`,
+                                    type: 'info', // Metro is info for now
+                                    title: `Metro ${lineCode}`,
+                                    description: `Stato: ${p.ESTAT} - ${p.DESC_ESTAT || ''}`,
                                     lines: [lineCode],
                                     date: null
                                 });
@@ -1828,7 +1864,10 @@
                     });
                 }
                 
-                // Sort alerts: Danger first, then Warning
+                // Update Diagnostic Stats
+                document.getElementById('alertStats').textContent = `Analizzate: ${stats.interrupcions} interruzioni, ${stats.busLines} linee bus, ${stats.metroLines} linee metro.`;
+
+                // Sort alerts
                 alerts.sort((a, b) => {
                     if (a.type === 'danger' && b.type !== 'danger') return -1;
                     if (a.type !== 'danger' && b.type === 'danger') return 1;
@@ -1873,11 +1912,10 @@
             const container = document.getElementById('alertsList');
             
             let html = alerts.map((alert, index) => {
-                const typeClass = alert.type === 'danger' ? 'alert-danger' : 'alert-warning';
-                const badgeClass = alert.type === 'danger' ? 'danger' : 'warning';
-                const typeLabel = alert.type === 'danger' ? 'Interruzione' : 'Avviso';
+                const typeClass = alert.type === 'danger' ? 'alert-danger' : (alert.type === 'warning' ? 'alert-warning' : 'alert-info');
+                const badgeClass = alert.type === 'danger' ? 'danger' : (alert.type === 'warning' ? 'warning' : 'info');
+                const typeLabel = alert.type === 'danger' ? 'Interruzione' : (alert.type === 'warning' ? 'Avviso' : 'Info');
                 
-                // Formatta la data se presente
                 let dateStr = '';
                 if (alert.date) {
                     dateStr = `<div class="text-xs text-gray-400 mt-1 mb-2">Dal: ${alert.date}</div>`;
