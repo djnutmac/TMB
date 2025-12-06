@@ -1807,8 +1807,23 @@
                 loader.classList.add('hidden');
 
                 if (data.plan && data.plan.itineraries && data.plan.itineraries.length > 0) {
+                    
+                    // FILTRO: Mantieni solo i percorsi che hanno almeno una tratta in BUS
+                    const busItineraries = data.plan.itineraries.filter(it => 
+                        it.legs.some(leg => leg.mode === 'BUS')
+                    );
+
+                    if (busItineraries.length === 0) {
+                        resultsDiv.innerHTML = `
+                            <div class="card-bus p-4 text-center">
+                                <p class="text-orange-500 font-bold mb-1">Solo percorsi a piedi</p>
+                                <p class="text-sm text-gray-500">Non sono stati trovati percorsi con autobus utili per questa tratta. Prova ad aumentare la distanza o cambiare destinazione.</p>
+                            </div>`;
+                        return;
+                    }
+
                     // Limit to top 3
-                    const topItineraries = data.plan.itineraries.slice(0, 3);
+                    const topItineraries = busItineraries.slice(0, 3);
                     
                     topItineraries.forEach((itinerary, index) => {
                         const duration = Math.round(itinerary.duration / 60);
