@@ -1753,10 +1753,18 @@
                 // STRATEGY: DOUBLE FETCH (Interruzioni + Stato Linee Bus)
                 // Questo è cruciale perché a volte 'interrupcions' è vuoto ma ci sono 'incidenze' nelle linee
                 
-                const [dataInterrupcions, dataBus] = await Promise.all([
+                const results = await Promise.allSettled([
                     fetchWithProxy(`${BASE_URL}/transit/linies/interrupcions?app_id=${API_ID}&app_key=${API_KEY}`),
                     fetchWithProxy(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`)
                 ]);
+
+                const interrupcionsResult = results[0];
+                const busResult = results[1];
+
+                // Se entrambi falliscono, lancia errore
+                if (interrupcionsResult.status === 'rejected' && busResult.status === 'rejected') {
+                    throw new Error("Impossibile contattare i servizi TMB");
+                }
                 
                 if (!silent) {
                     document.getElementById('alertsLoading').classList.add('hidden');
@@ -1766,8 +1774,8 @@
                 const addedAlertIds = new Set(); // Per evitare duplicati
                 
                 // 1. Process Interrupcions (Grandi avvisi)
-                if (dataInterrupcions && dataInterrupcions.features) {
-                    dataInterrupcions.features.forEach(feature => {
+                if (interrupcionsResult.status === 'fulfilled' && interrupcionsResult.value && interrupcionsResult.value.features) {
+                    interrupcionsResult.value.features.forEach(feature => {
                         if (feature.properties) {
                             const p = feature.properties;
                             const id = p.CODI_INTERRUPCIO || Math.random().toString();
@@ -1794,16 +1802,13 @@
                 }
                 
                 // 2. Process Bus Lines (Incidenze minori)
-                if (dataBus && dataBus.features) {
-                    dataBus.features.forEach(feature => {
+                if (busResult.status === 'fulfilled' && busResult.value && busResult.value.features) {
+                    busResult.value.features.forEach(feature => {
                         if (feature.properties) {
                             const p = feature.properties;
                             
                             // Se lo stato NON è operativa, è un avviso
                             if (p.ESTAT && p.ESTAT !== 'OPERATIVA') {
-                                // Creiamo un ID basato sulla linea per evitare duplicati se l'abbiamo già preso dalle interruzioni
-                                // (Anche se le interruzioni hanno ID diversi, meglio mostrare info extra)
-                                
                                 const lineCode = p.NOM_LINIA || p.CODI_LINIA;
                                 
                                 alerts.push({
