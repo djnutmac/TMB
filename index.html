@@ -1076,36 +1076,35 @@
         
         // --- PROXY HELPER ---
         async function fetchWithProxy(targetUrl) {
-            // Strategy 1: corsproxy.io (Generally fast and direct)
-            try {
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error(`Corsproxy error: ${response.status}`);
-                return await response.json();
-            } catch (e1) {
-                // Strategy 2: CodeTabs (Alternative)
+            const proxies = [
+                {
+                    url: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&disableCache=true`,
+                    extract: (data) => JSON.parse(data.contents)
+                },
+                {
+                    url: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+                    extract: (data) => data
+                },
+                {
+                    url: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                    extract: (data) => data
+                }
+            ];
+
+            let lastError = null;
+
+            for (const proxy of proxies) {
                 try {
-                    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok) throw new Error(`CodeTabs error: ${response.status}`);
-                    return await response.json();
-                } catch (e2) {
-                    // Strategy 3: AllOrigins (Wrapped JSON)
-                    try {
-                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-                        const response = await fetch(proxyUrl);
-                        const data = await response.json();
-                        if (!data.contents) throw new Error("Risposta vuota dal proxy");
-                        try {
-                            return JSON.parse(data.contents);
-                        } catch (parseError) {
-                            throw new Error(`Proxy returned non-JSON`);
-                        }
-                    } catch (e3) {
-                        throw e3;
-                    }
+                    const response = await fetch(proxy.url(targetUrl));
+                    if (!response.ok) throw new Error(`Status ${response.status}`);
+                    const data = await response.json();
+                    return proxy.extract(data);
+                } catch (e) {
+                    console.warn(`Proxy failed: ${proxy.url(targetUrl).split('?')[0]}`, e);
+                    lastError = e;
                 }
             }
+            throw lastError || new Error("All proxies failed");
         }
 
         // --- POLYLINE DECODER ---
@@ -1746,7 +1745,8 @@
             }
             
             try {
-                const data = await fetchWithProxy(`${BASE_URL}/transit/linies/bus?app_id=${API_ID}&app_key=${API_KEY}`);
+                // FIXED: Utilizzo dell'endpoint corretto per le interruzioni dettagliate
+                const data = await fetchWithProxy(`${BASE_URL}/transit/linies/interrupcions?app_id=${API_ID}&app_key=${API_KEY}`);
                 
                 if (!silent) {
                     document.getElementById('alertsLoading').classList.add('hidden');
@@ -1755,14 +1755,22 @@
                 let alerts = [];
                 
                 if (data.features) {
-                    data.features.forEach(line => {
-                        if (line.properties && line.properties.ESTAT && line.properties.ESTAT !== 'OPERATIVA') {
+                    data.features.forEach(feature => {
+                        if (feature.properties) {
+                            const p = feature.properties;
+                            // Parsing delle linee coinvolte (spesso è una stringa separata da virgole)
+                            let lines = [];
+                            if (p.LINIES) {
+                                lines = p.LINIES.split(',').map(l => l.trim()).filter(l => l.length > 0);
+                            }
+                            
                             alerts.push({
-                                id: line.properties.CODI_LINIA,
-                                type: 'warning',
-                                title: `Linea ${line.properties.NOM_LINIA || line.properties.CODI_LINIA}`,
-                                description: `Stato: ${line.properties.ESTAT}`,
-                                lines: [line.properties.NOM_LINIA || line.properties.CODI_LINIA]
+                                id: p.CODI_INTERRUPCIO || Math.random().toString(), // ID unico
+                                type: 'warning', // Le interruzioni sono quasi sempre warning o danger
+                                title: p.CAUSA || 'Avviso di Servizio',
+                                description: p.DESC_INTERRUPCIO || 'Nessuna descrizione disponibile.',
+                                lines: lines,
+                                date: p.DATA_INI
                             });
                         }
                     });
@@ -1773,16 +1781,13 @@
                 const lastAlertIds = lastAlerts.map(a => a.id).sort().join(',');
                 
                 if (currentAlertIds !== lastAlertIds && lastAlerts.length > 0) {
-                    // New alerts detected
                     hasNewAlerts = true;
                     showAlertBadge();
                 }
                 
-                // Save current alerts
                 lastAlerts = alerts;
                 localStorage.setItem('tmbLastAlerts', JSON.stringify(alerts));
                 
-                // Update last update time
                 alertsLastUpdate = new Date();
                 
                 if (alerts.length === 0) {
@@ -1793,7 +1798,6 @@
                     renderAlerts(alerts, silent);
                 }
                 
-                // Start auto-refresh if not already running
                 startAlertsAutoRefresh();
                 
             } catch (err) {
@@ -1810,20 +1814,24 @@
             const container = document.getElementById('alertsList');
             
             let html = alerts.map((alert, index) => {
-                const typeClass = alert.type === 'danger' ? 'alert-danger' : 
-                                  alert.type === 'warning' ? 'alert-warning' : 'alert-info';
-                const badgeClass = alert.type === 'danger' ? 'danger' : 
-                                   alert.type === 'warning' ? 'warning' : 'info';
-                const typeLabel = alert.type === 'danger' ? 'Interruzione' : 
-                                  alert.type === 'warning' ? 'Avviso' : 'Informazione';
+                const typeClass = 'alert-warning';
+                const badgeClass = 'warning';
+                const typeLabel = 'Avviso';
                 
+                // Formatta la data se presente
+                let dateStr = '';
+                if (alert.date) {
+                    dateStr = `<div class="text-xs text-gray-400 mt-1 mb-2">Dal: ${alert.date}</div>`;
+                }
+
                 return `
                     <div class="alert-card ${typeClass} ${silent ? '' : 'fade-in'}" style="${silent ? '' : 'animation-delay: ' + (index * 0.1) + 's'}">
                         <div class="flex items-start justify-between gap-2 mb-2">
                             <h4 class="font-bold text-gray-800 text-sm">${alert.title}</h4>
                             <span class="alert-badge ${badgeClass}">${typeLabel}</span>
                         </div>
-                        <p class="text-gray-600 text-sm">${alert.description}</p>
+                        ${dateStr}
+                        <p class="text-gray-600 text-sm leading-relaxed">${alert.description}</p>
                         ${alert.lines && alert.lines.length > 0 ? `
                             <div class="alert-lines">
                                 ${alert.lines.map(line => `<span class="alert-line-chip">${line}</span>`).join('')}
@@ -1833,7 +1841,6 @@
                 `;
             }).join('');
             
-            // Add last update timestamp
             if (alertsLastUpdate) {
                 html += `<p class="alert-last-update">Ultimo aggiornamento: ${alertsLastUpdate.toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})} • Prossimo aggiornamento tra 10 min</p>`;
             }
