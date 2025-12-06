@@ -50,6 +50,7 @@
         
         .line-normal { background: linear-gradient(135deg, #dc0530 0%, #ff1744 100%); }
         .line-v { background: linear-gradient(135deg, #00a651 0%, #00c853 100%); }
+        /* COLORE H FORZATO A BLU SCURO */
         .line-h { background: linear-gradient(135deg, #003888 0%, #004bad 100%); }
         .line-d { background: linear-gradient(135deg, #8e44ad 0%, #ab47bc 100%); }
         .line-x { background: linear-gradient(135deg, #1a1a1a 0%, #424242 100%); }
@@ -87,7 +88,7 @@
             border: none;
             background: transparent;
             flex: 1;
-            white-space: nowrap; /* Evita a capo */
+            white-space: nowrap;
         }
         
         @media (min-width: 640px) {
@@ -249,6 +250,7 @@
         .metro-l5 { background: #0066b3; color: white; }
         .tram { background: #00a651; color: white; }
         
+        /* MAPPA QUADRATA */
         #map { 
             width: 100%; 
             aspect-ratio: 1 / 1;
@@ -592,6 +594,8 @@
             font-size: 0.7rem;
             font-weight: 600;
         }
+        
+        /* MAPPA PERCORSO QUADRATA */
         .map-container-route {
             width: 100%;
             aspect-ratio: 1 / 1;
@@ -674,7 +678,6 @@
 
             <button id="tabPercorso" onclick="switchTab('percorso')" class="tab-btn">
                 <span class="flex items-center justify-center gap-1">
-                    <!-- ICONA OMINO -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>
@@ -925,7 +928,7 @@
         
         <!-- Footer -->
         <div class="text-center text-gray-400 text-xs mt-4 pb-3">
-            Dati forniti da TMB Barcelona
+            Dati forniti da TMB Barcelona - v2.0
         </div>
     </div>
 
