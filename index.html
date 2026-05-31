@@ -185,7 +185,7 @@
 <div class="toast-notification" id="toast"><div class="toast-title" id="tT"></div><div class="toast-msg" id="tM"></div></div>
 
 <script>
-const AID='16619440',AKEY='e596d48164d007881b182b84bb3099bf',BU='https://api.tmb.cat/v1';
+const AID='a5d88368',AKEY='4a578607c30c461a8fd7729700711337',BU='https://api.tmb.cat/v1';
 async function F(url){const px=[{u:x=>`https://api.allorigins.win/get?url=${encodeURIComponent(x)}&disableCache=true`,e:d=>JSON.parse(d.contents)},{u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`,e:d=>d},{u:x=>`https://corsproxy.io/?${encodeURIComponent(x)}`,e:d=>d}];let er;for(const p of px){try{const r=await fetch(p.u(url));if(!r.ok)throw new Error('HTTP '+r.status);return p.e(await r.json())}catch(e){er=e}}throw er}
 function decPL(s,p){let i=0,la=0,lo=0,c=[],sh,r,b,f=Math.pow(10,p||5);while(i<s.length){b=null;sh=0;r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);la+=((r&1)?~(r>>1):(r>>1));sh=r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);lo+=((r&1)?~(r>>1):(r>>1));c.push([la/f,lo/f])}return c}
 function natS(a,b){const re=/(\d+)/g,ap=a.split(re),bp=b.split(re);for(let i=0;i<Math.max(ap.length,bp.length);i++){const x=ap[i]||'',y=bp[i]||'',xn=parseInt(x),yn=parseInt(y);if(!isNaN(xn)&&!isNaN(yn)){if(xn!==yn)return xn-yn}else{const c=x.localeCompare(y);if(c)return c}}return 0}
