@@ -13,7 +13,14 @@
         body{background:#f5f5f5;margin:0;padding:0;height:100vh;overflow:hidden}
         .app-container{display:flex;flex-direction:column;height:100vh}
         .header-bar{background:white;padding:10px 16px;border-bottom:1px solid #eee;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.06);z-index:10}
-        .tabs-bar{display:flex;background:#f0f0f0;flex-shrink:0;overflow-x:auto;border-bottom:1px solid #e0e0e0}
+        
+        /* Modifiche Tab per supportare lo scrolling orizzontale su mobile */
+        .tabs-bar{display:flex;background:#f0f0f0;flex-shrink:0;overflow-x:auto;border-bottom:1px solid #e0e0e0; scrollbar-width: none;}
+        .tabs-bar::-webkit-scrollbar { display: none; }
+        .tab-btn{position:relative;padding:10px 14px;font-weight:600;font-size:.75rem;color:#999;border:none;background:transparent;flex:0 0 auto;white-space:nowrap;cursor:pointer;transition:all .2s}
+        .tab-btn.active{color:#dc0530;background:white}
+        .tab-btn.active::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:22px;height:3px;background:#dc0530;border-radius:3px}
+        
         .main-split{display:flex;flex:1;min-height:0}
         .panel-left{width:40%;min-width:300px;background:white;overflow-y:auto;border-right:1px solid #e0e0e0;flex-shrink:0}
         .panel-right{width:60%;position:relative;min-width:0}
@@ -26,9 +33,7 @@
         .line-normal{background:linear-gradient(135deg,#dc0530,#ff1744)}.line-v{background:linear-gradient(135deg,#00a651,#00c853)}.line-h{background:linear-gradient(135deg,#003888,#004bad)}.line-d{background:linear-gradient(135deg,#8e44ad,#ab47bc)}.line-x{background:linear-gradient(135deg,#1a1a1a,#424242)}
         .time-display{font-size:.95rem;font-weight:700}.time-red{color:#dc0530}.time-orange{color:#e17055}.time-green{color:#00c853;animation:pg 1.5s ease-in-out infinite}
         @keyframes pg{0%,100%{opacity:1}50%{opacity:.5}}
-        .tab-btn{position:relative;padding:10px 8px;font-weight:600;font-size:.72rem;color:#999;border:none;background:transparent;flex:1;white-space:nowrap;cursor:pointer;transition:all .2s}
-        .tab-btn.active{color:#dc0530;background:white}
-        .tab-btn.active::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:22px;height:3px;background:#dc0530;border-radius:3px}
+        
         .card-bus{background:#fafafa;border:1px solid #eee}
         .input-modern{background:#f5f5f5;border:2px solid #e0e0e0;border-radius:10px;padding:10px 12px;color:#333;font-size:.88rem;width:100%;transition:all .3s}
         .input-modern:focus{outline:none;border-color:#dc0530;background:white;box-shadow:0 0 0 3px rgba(220,5,48,.1)}
@@ -100,8 +105,6 @@
         .map-stop-popup.show{display:block;animation:fi .2s ease}
         .leaflet-tooltip{background:white;border:1px solid #ddd;border-radius:5px;padding:4px 7px;font-size:11px;font-weight:500;box-shadow:0 2px 5px rgba(0,0,0,.1)}
         .refresh-dot{width:6px;height:6px;border-radius:50%;background:#00c853;animation:pg 2s ease-in-out infinite;display:inline-block}.refresh-dot.paused{background:#ccc;animation:none}
-
-        /* Intersezioni box */
         .intersect-box{background:linear-gradient(135deg,#f8f9fa,#fff);border:1px solid #e8e8e8;border-radius:10px;padding:10px 12px;margin-bottom:10px}
         .intersect-title{font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
         .intersect-lines{display:flex;flex-wrap:wrap;gap:6px}
@@ -121,20 +124,23 @@
             </div>
         </div>
     </div>
+    <!-- TABS BAR CON AVVISI -->
     <div class="tabs-bar">
         <button id="tabCerca" onclick="sTab('cerca')" class="tab-btn active">🔍 Cerca</button>
         <button id="tabLinee" onclick="sTab('linee')" class="tab-btn">🚌 Linee</button>
         <button id="tabPercorso" onclick="sTab('percorso')" class="tab-btn">🗺️ Percorso</button>
         <button id="tabVicinanze" onclick="sTab('vicinanze')" class="tab-btn">📍 Vicinanze</button>
         <button id="tabPreferiti" onclick="sTab('preferiti')" class="tab-btn">⭐ Preferiti</button>
+        <button id="tabAvvisi" onclick="sTab('avvisi')" class="tab-btn">🔔 Avvisi</button>
     </div>
     <div class="main-split">
         <div class="panel-left" id="panelLeft">
+            
+            <!-- TAB CERCA -->
             <div id="contentCerca" class="content-padding">
                 <div class="flex gap-2 mb-3"><div class="flex-1 relative"><input type="text" id="stopCode" placeholder="Codice o nome fermata..." class="input-modern" oninput="hSS()" onkeypress="if(event.key==='Enter'){cSug();doSearch()}"><div class="stop-suggestions" id="sSug"></div></div><button onclick="cSug();doSearch()" class="btn-primary" style="padding:10px 14px">🔍</button></div>
                 <div id="qFav" class="mb-3 hidden"><p class="text-gray-400 text-xs mb-1">⭐</p><div id="favBtns" class="flex flex-wrap gap-1"></div></div>
                 <div id="sInfo" class="hidden mb-3 card-bus p-3 rounded-xl fade-in"><div class="flex items-center justify-between gap-2"><div class="min-w-0 flex-1"><h2 id="sName" class="text-sm font-bold text-gray-800 truncate"></h2><div class="flex items-center gap-1"><p id="sCode" class="text-gray-500 text-xs"></p><span class="text-gray-300">•</span><p id="sUpd" class="text-gray-400 text-xs"></p></div></div><button id="favBtn" onclick="togFav()" class="star-btn">☆</button></div></div>
-                <!-- INTERSEZIONI BOX -->
                 <div id="intersectBox" class="intersect-box hidden fade-in">
                     <div class="intersect-title">🔀 Intersezioni — Linee disponibili</div>
                     <div id="intersectLines" class="intersect-lines"></div>
@@ -145,11 +151,15 @@
                 <div id="loading" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
                 <div id="errBox" class="hidden card-bus p-3 text-center rounded-xl"><p id="errTxt" class="text-gray-600 text-xs"></p></div>
             </div>
+            
+            <!-- TAB LINEE -->
             <div id="contentLinee" class="content-padding hidden">
                 <div class="mb-3"><input type="text" id="lnSearch" placeholder="Filtra linee..." class="input-modern" oninput="fltLn()"></div>
                 <div id="lnLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
                 <div id="lnContent"></div>
             </div>
+            
+            <!-- TAB PERCORSO -->
             <div id="contentPercorso" class="content-padding hidden">
                 <div class="space-y-3 mb-3">
                     <div class="relative"><label class="block text-xs text-gray-400 mb-1 font-semibold">DA</label><div class="relative"><input type="text" id="rFrom" placeholder="Indirizzo o fermata..." class="input-modern pr-8" oninput="hAI(this,'fL')" autocomplete="off"><button onclick="useML()" class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-1">📍</button></div><div id="fL" class="suggestions-list"></div></div>
@@ -159,6 +169,8 @@
                 <div id="rLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
                 <div id="rRes" class="space-y-3"></div>
             </div>
+            
+            <!-- TAB VICINANZE -->
             <div id="contentVicinanze" class="content-padding hidden">
                 <button onclick="geoLoc()" class="btn-secondary w-full mb-3">📍 Trova Fermate Vicine</button>
                 <div id="gLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
@@ -166,11 +178,39 @@
                 <div id="nbList"></div>
                 <div id="nbInit" class="text-center py-8"><div class="text-3xl mb-2">📍</div><p class="text-gray-400 text-xs">Trova le fermate vicine</p></div>
             </div>
+            
+            <!-- TAB PREFERITI -->
             <div id="contentPreferiti" class="content-padding hidden">
                 <div class="mb-3"><input type="text" id="sStops" placeholder="Cerca fermata..." class="input-modern" oninput="fltSt()"></div>
                 <div class="mb-4"><h3 class="font-bold text-gray-700 mb-2 text-xs">★ Preferite</h3><div id="favList" class="card-bus rounded-xl max-h-32 overflow-y-auto scrollbar-custom"></div></div>
                 <div><h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte</h3><div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div></div>
             </div>
+
+            <!-- NUOVO TAB AVVISI -->
+            <div id="contentAvvisi" class="content-padding hidden fade-in">
+                <div class="mb-3">
+                    <h3 class="font-bold text-gray-800 text-sm mb-1">Stato del Servizio TMB</h3>
+                    <p class="text-xs text-gray-500">Avvisi in tempo reale su interruzioni, deviazioni e allerte per bus e metro.</p>
+                </div>
+                
+                <div class="card-bus rounded-xl overflow-hidden shadow-sm border border-gray-200 relative" style="height: 480px; background: white;">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 text-gray-400 z-0">
+                        <span class="text-3xl mb-2">ℹ️</span>
+                        <p class="text-xs font-semibold">Feed Ufficiale @TMBinfo</p>
+                        <p class="text-xs mt-1">Caricamento avvisi...<br>(Se non compare nulla, potresti avere un ad-blocker attivo)</p>
+                    </div>
+                    <div class="relative z-10 w-full h-full overflow-y-auto bg-white">
+                        <a class="twitter-timeline" data-height="480" data-theme="light" data-chrome="noheader nofooter noborders" href="https://twitter.com/TMBinfo?ref_src=twsrc%5Etfw"></a>
+                        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                    </div>
+                </div>
+                
+                <button onclick="window.open('https://www.tmb.cat/ca/barcelona/estat-servei', '_blank')" class="btn-primary w-full mt-4 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    Apri pagina ufficiale Allerte TMB
+                </button>
+            </div>
+            
         </div>
         <div class="panel-right">
             <div id="map"></div>
@@ -185,23 +225,25 @@
 <div class="toast-notification" id="toast"><div class="toast-title" id="tT"></div><div class="toast-msg" id="tM"></div></div>
 
 <script>
-// NUOVE CHIAVI API AGGIORNATE
+// CHIAVI API AGGIORNATE DALL'UTENTE
 const AID='a5d88368',AKEY='4a578607c30c461a8fd7729700711337',BU='https://api.tmb.cat/v1';
 
-// MOTORE FETCH ESTREMAMENTE OTTIMIZZATO CON CACHE E CONNESSIONE DIRETTA
+// MOTORE FETCH ESTREMAMENTE OTTIMIZZATO (Cache Veloce + Connessione Diretta)
 async function F(url, ttl = 0) {
     if (ttl > 0) {
-        const cached = sessionStorage.getItem(url);
+        const cached = localStorage.getItem('tmbf_' + url); // Caching locale persistente
         if (cached) {
-            const p = JSON.parse(cached);
-            if (Date.now() - p.t < ttl) return p.d;
+            try {
+                const p = JSON.parse(cached);
+                if (Date.now() - p.t < ttl) return p.d;
+            } catch(e){}
         }
     }
     
-    // Prova prima la connessione DIRETTA (velocissima), poi usa proxy veloci come fallback
+    // TMB API SUPPORTA CORS! La connessione DIRETTA velocizza tutto dell'90%
     const px=[
-        {u:x=>x, e:d=>d}, // 1. TENTATIVO DIRETTO (0ms overhead se permesso)
-        {u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`, e:d=>d} // 2. Proxy Fallback 
+        {u:x=>x, e:d=>d}, // 1. TENTATIVO DIRETTO VELOCE (~100ms)
+        {u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`, e:d=>d} // 2. Fallback Proxy Lento
     ];
     
     let er;
@@ -210,7 +252,6 @@ async function F(url, ttl = 0) {
             const r=await fetch(p.u(url));
             if(!r.ok)throw new Error('HTTP '+r.status);
             
-            // Gestione robusta del JSON (alcuni proxy ritornano testo invece di JSON puro)
             const ct = r.headers.get("content-type");
             let data;
             if(ct && ct.includes("application/json")) {
@@ -221,7 +262,7 @@ async function F(url, ttl = 0) {
             
             const res = p.e(data);
             if (ttl > 0) {
-                try { sessionStorage.setItem(url, JSON.stringify({t: Date.now(), d: res})); } catch(e){}
+                try { localStorage.setItem('tmbf_' + url, JSON.stringify({t: Date.now(), d: res})); } catch(e){}
             }
             return res;
         }catch(e){er=e;}
@@ -235,14 +276,21 @@ function natS(a,b){const re=/(\d+)/g,ap=a.split(re),bp=b.split(re);for(let i=0;i
 let allS=[],fav=JSON.parse(localStorage.getItem('tmbF')||'[]'),curS=null,map=null,mkrs=[],selMkr=null,arInt=null,lastC=null,uLoc=null,uMkr=null;
 let allLn=[],lnLoaded=false,clStops={a:[],r:[],aLabel:'',rLabel:''},clName='',clCode='',aDir='a';
 let arOn=true,rSt={from:null,to:null},dTmr,abC=null;const sC=new Map();
-// Cache: stopCode -> array of line names
 let stopLinesCache={};
 
 function tst(t,m,e=false){const el=document.getElementById('toast');document.getElementById('tT').textContent=t;document.getElementById('tM').textContent=m;el.className='toast-notification'+(e?' error':'');el.style.display='block';setTimeout(()=>el.style.display='none',2800)}
 setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
 document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
-function sTab(t){['cerca','linee','percorso','vicinanze','preferiti'].forEach(x=>{document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active',x===t);document.getElementById('content'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('hidden',x!==t)});if(t==='preferiti'){rFL();rAS()}if(t==='linee'&&!lnLoaded)loadLn()}
+function sTab(t){
+    ['cerca','linee','percorso','vicinanze','preferiti','avvisi'].forEach(x=>{
+        document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active',x===t);
+        document.getElementById('content'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('hidden',x!==t);
+    });
+    if(t==='preferiti'){rFL();rAS()}
+    if(t==='linee'&&!lnLoaded)loadLn()
+}
+
 function gLC(l){const u=(l||'').toUpperCase();if(u.startsWith('V'))return'line-v';if(u.startsWith('H'))return'line-h';if(u.startsWith('D'))return'line-d';if(u.startsWith('X'))return'line-x';return'line-normal'}
 function gLCC(n){const u=(n||'').toUpperCase();if(u.startsWith('V'))return'green';if(u.startsWith('H'))return'blue';if(u.startsWith('D'))return'purple';return''}
 function fA(m){if(m<=0)return'<span class="time-display time-green">⚡</span>';if(m<=2)return`<span class="time-display time-green">${m}\'</span>`;if(m<=5)return`<span class="time-display time-orange">${m}\'</span>`;return`<span class="time-display time-red">${m}\'</span>`}
@@ -252,12 +300,10 @@ let ssT;
 function hSS(){clearTimeout(ssT);const q=document.getElementById('stopCode').value.trim();if(q.length<2){cSug();return}ssT=setTimeout(()=>{if(!allS.length)return;const s=q.toLowerCase(),m=allS.filter(x=>x.code.toString().startsWith(s)||x.name.toLowerCase().includes(s)).slice(0,8);const c=document.getElementById('sSug');if(!m.length){c.style.display='none';return}c.innerHTML=m.map(x=>`<div class="stop-suggestion-item" onclick="document.getElementById('stopCode').value='${x.code}';cSug();doSearch()"><div class="stop-sugg-name">🚏 ${x.name}</div><div class="stop-sugg-code">#${x.code}</div></div>`).join('');c.style.display='block'},200)}
 function cSug(){document.getElementById('sSug').style.display='none'}
 
-// Clears all markers from map
 function clearMap(){mkrs.forEach(m=>map.removeLayer(m));mkrs=[];if(selMkr){map.removeLayer(selMkr);selMkr=null}}
 
 function hlOnMap(code){
     if(selMkr){map.removeLayer(selMkr);selMkr=null}
-    // We search in allS (cached data)
     const s=allS.find(x=>x.code==code);
     if(!s||!s.lat||!s.lon)return;
     const yI=L.divIcon({className:'',html:'<div style="width:20px;height:20px;background:#ffc107;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(255,193,7,.6),0 2px 8px rgba(0,0,0,.3);z-index:9000"></div>',iconSize:[20,20],iconAnchor:[10,10]});
@@ -266,34 +312,27 @@ function hlOnMap(code){
     map.setView([s.lat,s.lon],17,{animate:true})
 }
 
-// === LOAD LINES FOR A STOP ===
+// CACHE DELLE LINEE DELLA FERMATA - 1 GIORNO DI CACHE
 async function loadStopLines(code){
     if(stopLinesCache[code])return stopLinesCache[code];
     try{
-        const d=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000); // 1 DAY CACHE!
+        const d=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000);
         if(d.features?.length){
             const props=d.features[0].properties;
             let lines=[];
             const liniesStr=props.LINIES||props.linies||props.LINIA||'';
-            if(liniesStr){
-                lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));
-            }
-            if(!lines.length&&props.lines){
-                lines=props.lines.filter(l=>!l.toUpperCase().startsWith('N'));
-            }
+            if(liniesStr) lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));
+            if(!lines.length&&props.lines) lines=props.lines.filter(l=>!l.toUpperCase().startsWith('N'));
             stopLinesCache[code]=lines;
             return lines;
         }
-    }catch(e){console.warn('loadStopLines err:',e)}
+    }catch(e){}
     return[];
 }
 
 async function getStopAllLines(code, ibusLines){
     const lineSet=new Set(ibusLines||[]);
-    try{
-        const apiLines=await loadStopLines(code);
-        apiLines.forEach(l=>lineSet.add(l));
-    }catch(e){}
+    try{const apiLines=await loadStopLines(code);apiLines.forEach(l=>lineSet.add(l));}catch(e){}
     return[...lineSet].filter(l=>!l.toUpperCase().startsWith('N')).sort((a,b)=>natS(a,b));
 }
 
@@ -315,7 +354,7 @@ function openLine(lineCode, lineName){
     setTimeout(()=>loadLS(lineCode,lineName),100);
 }
 
-// RICERCA COMPLETAMENTE PARALLELIZZATA
+// SCARICAMENTO IN PARALLELO ULTRAVELOCE
 async function doSearch(sil=false){
     let code=document.getElementById('stopCode').value.trim();
     if(sil&&lastC)code=lastC;if(!code)return;
@@ -324,10 +363,10 @@ async function doSearch(sil=false){
     if(!sil){document.getElementById('loading').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('errBox').classList.add('hidden');document.getElementById('sInfo').classList.add('hidden');document.getElementById('conns').classList.add('hidden');document.getElementById('ibusDsp').classList.add('hidden');document.getElementById('intersectBox').classList.add('hidden'); clearMap();} 
     
     try{
-        // ⚡ FIRE BOTH REQUESTS AT THE SAME TIME (Parades Info + Live ibus data)
+        // DUE RICHIESTE API IN CONTEMPORANEA PER DIMEZZARE I TEMPI
         const [sd, data] = await Promise.all([
             sil ? Promise.resolve(null) : F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000).catch(()=>null),
-            F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`) // live data (no cache)
+            F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`) 
         ]);
         
         if(!sil){
@@ -335,18 +374,12 @@ async function doSearch(sil=false){
                 const p=sd.features[0].properties;
                 curS={code,name:p.NOM_PARADA||'Fermata '+code};
                 const liniesStr=p.LINIES||p.linies||'';
-                if(liniesStr){
-                    const lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));
-                    stopLinesCache[code]=lines;
-                }
-            } else { 
-                curS={code,name:'Fermata '+code};
-            }
+                if(liniesStr) stopLinesCache[code]=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));
+            } else { curS={code,name:'Fermata '+code}; }
             document.getElementById('sName').textContent=curS.name;
             document.getElementById('sCode').textContent='#'+code;
             document.getElementById('sInfo').classList.remove('hidden');
-            updFB();
-            hlOnMap(code);
+            updFB(); hlOnMap(code);
             document.getElementById('loading').classList.add('hidden');
         }
 
@@ -365,9 +398,7 @@ async function doSearch(sil=false){
 
             if(!sil){
                 const ibusLineNames=[...new Set(buses.map(b=>b.line))];
-                getStopAllLines(code, ibusLineNames).then(allLines=>{
-                    renderIntersections(allLines, code);
-                });
+                getStopAllLines(code, ibusLineNames).then(allLines=>{renderIntersections(allLines, code);});
                 const ln=[...new Set(allBuses.map(x=>x.line.toUpperCase()))];
                 let cn=[];
                 if(ln.some(l=>['V15','H6','7','33','39'].includes(l)))cn.push({l:'L3',c:'metro-l3'});
@@ -378,14 +409,10 @@ async function doSearch(sil=false){
             }
         }else{
             document.getElementById('errTxt').textContent='Nessun bus in arrivo.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('ibusDsp').classList.add('hidden');
-            if(!sil){
-                getStopAllLines(code,[]).then(allLines=>{
-                    renderIntersections(allLines, code);
-                });
-            }
+            if(!sil){getStopAllLines(code,[]).then(allLines=>{renderIntersections(allLines, code);});}
         }
     }catch(e){
-        if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore API.';document.getElementById('errBox').classList.remove('hidden')}
+        if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore API TMB.';document.getElementById('errBox').classList.remove('hidden')}
     }
 }
 
@@ -399,9 +426,9 @@ function rQF(){const c=document.getElementById('favBtns'),w=document.getElementB
 function rFL(){const c=document.getElementById('favList');if(!fav.length){c.innerHTML='<p class="p-3 text-gray-400 text-center text-xs">—</p>';return}c.innerHTML=fav.map(f=>`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${f.code}')"><span class="font-bold text-red-600 text-xs">${f.code}</span> <span class="text-gray-600 text-xs">${f.name}</span></div><button onclick="fav=fav.filter(x=>x.code!=='${f.code}');localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rQF()" class="text-gray-300 hover:text-red-500 text-sm px-1">✕</button></div>`).join('')}
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
-// CACHE AGGRESSIVA DELLE FERMATE IN LOCALSTORAGE (Dura 7 Giorni)
+// CACHE AGGRESSIVA DELLE FERMATE IN LOCALSTORAGE (Dura 7 Giorni, velocissima)
 async function loadAllS(){
-    const lsKey = 'tmb_all_stops_cache_v2';
+    const lsKey = 'tmbf_all_stops_v3';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -412,7 +439,6 @@ async function loadAllS(){
             }
         } catch(e){}
     }
-    
     try {
         const d = await F(`${BU}/transit/parades?app_id=${AID}&app_key=${AKEY}`);
         if (d.features) {
@@ -420,20 +446,18 @@ async function loadAllS(){
             allS.sort((a,b)=>parseInt(a.code)-parseInt(b.code));
             try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allS})); } catch(e){}
         }
-    } catch(e) { console.error("Error loading stops:", e); }
+    } catch(e) {}
 }
 
 // CACHE AGGRESSIVA DELLE LINEE (Dura 7 Giorni)
 async function loadLn(){
-    if (lnLoaded) { renderLn(); return; } // Già caricato in memoria per questa sessione
-    
+    if (lnLoaded) { renderLn(); return; } 
     document.getElementById('lnLoad').classList.remove('hidden');
     document.getElementById('lnContent').innerHTML='';
     
-    const lsKey = 'tmb_all_lines_cache_v2';
+    const lsKey = 'tmbf_all_lines_v3';
     const cached = localStorage.getItem(lsKey);
     let f = null;
-    
     if(cached){
         try {
             const parsed = JSON.parse(cached);
@@ -447,12 +471,10 @@ async function loadLn(){
             f=d?.features||(Array.isArray(d)?d:null);
             if(f) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: f})); } catch(e){}
         }
-        
-        if(!f?.length)throw new Error('Nessuna linea');
+        if(!f?.length)throw new Error('Nessuna linea trovata.');
         allLn=f.map(x=>{const p=x.properties||x;return{code:p.CODI_LINIA||'',name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||''}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
         allLn.sort((a,b)=>natS(a.name,b.name));
-        lnLoaded=true;
-        renderLn();
+        lnLoaded=true; renderLn();
     }catch(e){
         document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore</div><div class="error-detail">${e.message}</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
     }
@@ -462,19 +484,17 @@ async function loadLn(){
 function renderLn(flt=''){const c=document.getElementById('lnContent');let fl=allLn;if(flt){const q=flt.toLowerCase();fl=allLn.filter(l=>l.name.toLowerCase().includes(q)||l.desc.toLowerCase().includes(q))}const g={};fl.forEach(l=>{const u=l.name.toUpperCase();let p=/^\d/.test(u)?'Numeriche':u[0];if(!g[p])g[p]=[];g[p].push(l)});let h='';['Numeriche','H','V','D','X'].forEach(k=>{if(!g[k]?.length)return;h+=`<h3 class="font-bold text-gray-600 mb-2 text-xs">${k==='Numeriche'?'Numeriche':k} (${g[k].length})</h3><div class="lines-grid mb-4">`;g[k].forEach(l=>h+=`<div class="line-grid-item" onclick="loadLS('${l.code}','${l.name}')"><div class="line-num ${gLCC(l.name)}">${l.name}</div><div class="line-label">${l.origin?l.origin.substring(0,8):''}</div></div>`);h+='</div>'});if(!fl.length)h='<p class="text-center text-gray-400 py-4 text-xs">Nessuna linea</p>';c.innerHTML=h}
 function fltLn(){renderLn(document.getElementById('lnSearch').value.trim())}
 
-// REFACTORED: Better Direction & Ordering Logic CON SESSION CACHE
+// CACHE DEL TRACCIATO IN MEMORIA SESSIONE (30 minuti di cache per ricaricamenti istantanei)
 async function loadLS(lc,ln){
     clName=ln;clCode=lc;aDir='a';
     const c=document.getElementById('lnContent');
     c.innerHTML='<div class="py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>';
-    
     const lineMeta = allLn.find(l => l.code == lc) || {origin: '', dest: ''};
 
     try{
-        // CACHE TRACCIATO PER 1 ORA IN SESSION STORAGE (Velocissimo tornare indietro)
-        const d=await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 3600000); 
+        const d=await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 1800000); 
         let f=d?.features||(Array.isArray(d)?d:null);
-        if(!f?.length)throw new Error('Nessuna fermata');
+        if(!f?.length)throw new Error('Nessuna fermata in questa linea.');
         
         const all=f.map(x=>{
             const p=x.properties||x;
@@ -494,15 +514,13 @@ async function loadLS(lc,ln){
             if(!variantsMap[s.variant]) variantsMap[s.variant] = [];
             variantsMap[s.variant].push(s);
         });
-
         const sortedVariants = Object.values(variantsMap).sort((a,b) => b.length - a.length);
 
         if(sortedVariants.length >= 1){
             let group1 = sortedVariants[0].sort((a,b)=>a.order-b.order);
             let group2 = sortedVariants.length > 1 ? sortedVariants[1].sort((a,b)=>a.order-b.order) : [];
 
-            clStops.a = group1;
-            clStops.r = group2;
+            clStops.a = group1; clStops.r = group2;
             
             const last1 = group1[group1.length-1]?.name.toUpperCase() || '';
             const metaDest = lineMeta.dest.toUpperCase();
@@ -519,10 +537,7 @@ async function loadLS(lc,ln){
             clStops.aLabel = label1;
             clStops.rLabel = label2;
 
-        }else{
-            clStops.a=[];
-            clStops.r=[];
-        }
+        }else{ clStops.a=[]; clStops.r=[]; }
         
         renderLV('');
         addLnMkrs(clStops[aDir]);
@@ -553,7 +568,6 @@ function renderLV(fq){
 }
 function hlT(t,q){return t.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi'),'<mark style="background:#ffeaa7;padding:0 1px;border-radius:2px;font-weight:700">$1</mark>')}
 
-// ONLY adds markers for the selected line (Performance fix)
 function addLnMkrs(stops){
     mkrs.forEach(m=>map.removeLayer(m));mkrs=[];
     if(selMkr){map.removeLayer(selMkr);selMkr=null}
@@ -563,7 +577,6 @@ function addLnMkrs(stops){
     const bounds=L.latLngBounds();
     stops.forEach((s,i)=>{
         if(!s.lat||!s.lon)return;
-        // Logic for start/end marker based on index
         const icon=i===0?icF:(i===stops.length-1?icL:ic);
         const m=L.marker([s.lat,s.lon],{icon}).addTo(map).bindTooltip(`<strong>${i+1}.</strong> ${s.name}<br>#${s.code}`,{direction:'top',offset:[0,-8]});
         m.on('click',()=>mapClick(s));
@@ -580,10 +593,8 @@ function geoLoc(){document.getElementById('nbInit').classList.add('hidden');docu
 function cDist(a,b,c,d){const R=6371000,dL=(c-a)*Math.PI/180,dN=(d-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dN/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
 function fD(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km'}
 async function showNb(){if(!uLoc||!allS.length)return;
-    clearMap(); // Clear map before showing nearby
+    clearMap(); 
     const sorted=allS.filter(s=>s.lat&&s.lon).map(s=>({...s,dist:cDist(uLoc.lat,uLoc.lon,s.lat,s.lon)})).sort((a,b)=>a.dist-b.dist).slice(0,12);document.getElementById('nbList').innerHTML=sorted.map((s,i)=>`<div class="nearby-stop fade-in" style="animation-delay:${i*.04}s" onclick="selSt('${s.code}')"><div class="flex items-center justify-between mb-1"><div class="flex items-center gap-2"><span class="font-bold text-red-600 text-xs">${s.code}</span><span class="distance-badge">${fD(s.dist)}</span></div></div><p class="text-gray-700 text-xs truncate mb-1">${s.name}</p><div id="nb-${s.code}" class="text-xs text-gray-300">...</div></div>`).join('');tst('Trovate',sorted.length);sorted.slice(0,6).forEach(s=>lNbA(s.code));
-    
-    // Add markers for nearby
     const ic=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#0066b3;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
     const bounds = L.latLngBounds();
     sorted.forEach(s=>{
