@@ -185,8 +185,50 @@
 <div class="toast-notification" id="toast"><div class="toast-title" id="tT"></div><div class="toast-msg" id="tM"></div></div>
 
 <script>
+// NUOVE CHIAVI API AGGIORNATE
 const AID='a5d88368',AKEY='4a578607c30c461a8fd7729700711337',BU='https://api.tmb.cat/v1';
-async function F(url){const px=[{u:x=>`https://api.allorigins.win/get?url=${encodeURIComponent(x)}&disableCache=true`,e:d=>JSON.parse(d.contents)},{u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`,e:d=>d},{u:x=>`https://corsproxy.io/?${encodeURIComponent(x)}`,e:d=>d}];let er;for(const p of px){try{const r=await fetch(p.u(url));if(!r.ok)throw new Error('HTTP '+r.status);return p.e(await r.json())}catch(e){er=e}}throw er}
+
+// MOTORE FETCH ESTREMAMENTE OTTIMIZZATO CON CACHE E CONNESSIONE DIRETTA
+async function F(url, ttl = 0) {
+    if (ttl > 0) {
+        const cached = sessionStorage.getItem(url);
+        if (cached) {
+            const p = JSON.parse(cached);
+            if (Date.now() - p.t < ttl) return p.d;
+        }
+    }
+    
+    // Prova prima la connessione DIRETTA (velocissima), poi usa proxy veloci come fallback
+    const px=[
+        {u:x=>x, e:d=>d}, // 1. TENTATIVO DIRETTO (0ms overhead se permesso)
+        {u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`, e:d=>d} // 2. Proxy Fallback 
+    ];
+    
+    let er;
+    for(const p of px){
+        try{
+            const r=await fetch(p.u(url));
+            if(!r.ok)throw new Error('HTTP '+r.status);
+            
+            // Gestione robusta del JSON (alcuni proxy ritornano testo invece di JSON puro)
+            const ct = r.headers.get("content-type");
+            let data;
+            if(ct && ct.includes("application/json")) {
+                data = await r.json();
+            } else {
+                data = JSON.parse(await r.text());
+            }
+            
+            const res = p.e(data);
+            if (ttl > 0) {
+                try { sessionStorage.setItem(url, JSON.stringify({t: Date.now(), d: res})); } catch(e){}
+            }
+            return res;
+        }catch(e){er=e;}
+    }
+    throw er;
+}
+
 function decPL(s,p){let i=0,la=0,lo=0,c=[],sh,r,b,f=Math.pow(10,p||5);while(i<s.length){b=null;sh=0;r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);la+=((r&1)?~(r>>1):(r>>1));sh=r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);lo+=((r&1)?~(r>>1):(r>>1));c.push([la/f,lo/f])}return c}
 function natS(a,b){const re=/(\d+)/g,ap=a.split(re),bp=b.split(re);for(let i=0;i<Math.max(ap.length,bp.length);i++){const x=ap[i]||'',y=bp[i]||'',xn=parseInt(x),yn=parseInt(y);if(!isNaN(xn)&&!isNaN(yn)){if(xn!==yn)return xn-yn}else{const c=x.localeCompare(y);if(c)return c}}return 0}
 
@@ -228,7 +270,7 @@ function hlOnMap(code){
 async function loadStopLines(code){
     if(stopLinesCache[code])return stopLinesCache[code];
     try{
-        const d=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`);
+        const d=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000); // 1 DAY CACHE!
         if(d.features?.length){
             const props=d.features[0].properties;
             let lines=[];
@@ -273,30 +315,50 @@ function openLine(lineCode, lineName){
     setTimeout(()=>loadLS(lineCode,lineName),100);
 }
 
+// RICERCA COMPLETAMENTE PARALLELIZZATA
 async function doSearch(sil=false){
     let code=document.getElementById('stopCode').value.trim();
     if(sil&&lastC)code=lastC;if(!code)return;
     if(!/^\d+$/.test(code)&&!sil){const m=allS.find(x=>x.name.toLowerCase().includes(code.toLowerCase()));if(m){code=m.code;document.getElementById('stopCode').value=code}else{document.getElementById('errTxt').textContent='Non trovata.';document.getElementById('errBox').classList.remove('hidden');return}}
     lastC=code;if(arOn)startAR();
-    if(!sil){document.getElementById('loading').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('errBox').classList.add('hidden');document.getElementById('sInfo').classList.add('hidden');document.getElementById('conns').classList.add('hidden');document.getElementById('ibusDsp').classList.add('hidden');document.getElementById('intersectBox').classList.add('hidden'); clearMap();} // CLEAR MAP on search
+    if(!sil){document.getElementById('loading').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('errBox').classList.add('hidden');document.getElementById('sInfo').classList.add('hidden');document.getElementById('conns').classList.add('hidden');document.getElementById('ibusDsp').classList.add('hidden');document.getElementById('intersectBox').classList.add('hidden'); clearMap();} 
+    
     try{
-        if(!sil){try{const sd=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`);if(sd.features?.length){const p=sd.features[0].properties;curS={code,name:p.NOM_PARADA||'Fermata '+code};
-            const liniesStr=p.LINIES||p.linies||'';
-            if(liniesStr){
-                const lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));
-                stopLinesCache[code]=lines;
+        // ⚡ FIRE BOTH REQUESTS AT THE SAME TIME (Parades Info + Live ibus data)
+        const [sd, data] = await Promise.all([
+            sil ? Promise.resolve(null) : F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000).catch(()=>null),
+            F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`) // live data (no cache)
+        ]);
+        
+        if(!sil){
+            if(sd && sd.features?.length){
+                const p=sd.features[0].properties;
+                curS={code,name:p.NOM_PARADA||'Fermata '+code};
+                const liniesStr=p.LINIES||p.linies||'';
+                if(liniesStr){
+                    const lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));
+                    stopLinesCache[code]=lines;
+                }
+            } else { 
+                curS={code,name:'Fermata '+code};
             }
-        }else curS={code,name:'Fermata '+code}}catch(e){curS={code,name:'Fermata '+code}}
-        document.getElementById('sName').textContent=curS.name;document.getElementById('sCode').textContent='#'+code;document.getElementById('sInfo').classList.remove('hidden');updFB();hlOnMap(code)}
+            document.getElementById('sName').textContent=curS.name;
+            document.getElementById('sCode').textContent='#'+code;
+            document.getElementById('sInfo').classList.remove('hidden');
+            updFB();
+            hlOnMap(code);
+            document.getElementById('loading').classList.add('hidden');
+        }
 
-        const data=await F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`);
-        if(!sil)document.getElementById('loading').classList.add('hidden');
         document.getElementById('sUpd').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
-        if(data.data?.ibus?.length){
+        if(data && data.data?.ibus?.length){
             let allBuses=data.data.ibus;
             let buses=allBuses.filter(x=>!x.line.toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']);
-            if(!buses.length){document.getElementById('errTxt').textContent='Nessun bus diurno.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('ibusDsp').classList.add('hidden');return}
+            
+            if(!buses.length){
+                document.getElementById('errTxt').textContent='Nessun bus diurno.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('ibusDsp').classList.add('hidden');return
+            }
             document.getElementById('errBox').classList.add('hidden');
             rIbus(buses.slice(0,5),'ibusDsp');
             document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-2.5 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x['text-ca']||''}</p></div></div><div class="flex-shrink-0">${fA(x['t-in-min'])}</div></div></div>`).join('');
@@ -322,7 +384,9 @@ async function doSearch(sil=false){
                 });
             }
         }
-    }catch(e){if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore.';document.getElementById('errBox').classList.remove('hidden')}}
+    }catch(e){
+        if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore API.';document.getElementById('errBox').classList.remove('hidden')}
+    }
 }
 
 function rIbus(b,id){const c=document.getElementById(id);if(!b?.length){c.classList.add('hidden');return}c.innerHTML='<div class="ibus-display">'+b.map(x=>`<div class="ibus-row"><span class="ibus-line">${x.line}</span><span class="ibus-dest">${x.destination||''}</span><span class="ibus-time ${x['t-in-min']<=1?'arriving':''}">${x['t-in-min']<=1?'>>>':x['t-in-min']+"'"}</span></div>`).join('')+'</div>';c.classList.remove('hidden')}
@@ -335,29 +399,83 @@ function rQF(){const c=document.getElementById('favBtns'),w=document.getElementB
 function rFL(){const c=document.getElementById('favList');if(!fav.length){c.innerHTML='<p class="p-3 text-gray-400 text-center text-xs">—</p>';return}c.innerHTML=fav.map(f=>`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${f.code}')"><span class="font-bold text-red-600 text-xs">${f.code}</span> <span class="text-gray-600 text-xs">${f.name}</span></div><button onclick="fav=fav.filter(x=>x.code!=='${f.code}');localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rQF()" class="text-gray-300 hover:text-red-500 text-sm px-1">✕</button></div>`).join('')}
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
-async function loadAllS(){try{const d=await F(`${BU}/transit/parades?app_id=${AID}&app_key=${AKEY}`);if(d.features){allS=d.features.map(f=>({code:f.properties.CODI_PARADA||f.properties.CODI,name:f.properties.NOM_PARADA||f.properties.NOM||'Fermata',lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]})).filter(s=>s.code);allS.sort((a,b)=>parseInt(a.code)-parseInt(b.code));
-// NO LONGER ADDING ALL MARKERS TO MAP (Optimization)
-tst('Pronto',allS.length+' fermate caricate')}}catch(e){console.error(e)}}
+// CACHE AGGRESSIVA DELLE FERMATE IN LOCALSTORAGE (Dura 7 Giorni)
+async function loadAllS(){
+    const lsKey = 'tmb_all_stops_cache_v2';
+    const cached = localStorage.getItem(lsKey);
+    if(cached){
+        try {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.t < 86400000 * 7) { 
+                allS = parsed.d;
+                return;
+            }
+        } catch(e){}
+    }
+    
+    try {
+        const d = await F(`${BU}/transit/parades?app_id=${AID}&app_key=${AKEY}`);
+        if (d.features) {
+            allS = d.features.map(f=>({code:f.properties.CODI_PARADA||f.properties.CODI,name:f.properties.NOM_PARADA||f.properties.NOM||'Fermata',lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]})).filter(s=>s.code);
+            allS.sort((a,b)=>parseInt(a.code)-parseInt(b.code));
+            try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allS})); } catch(e){}
+        }
+    } catch(e) { console.error("Error loading stops:", e); }
+}
 
-async function loadLn(){document.getElementById('lnLoad').classList.remove('hidden');document.getElementById('lnContent').innerHTML='';try{const d=await F(`${BU}/transit/linies/bus?app_id=${AID}&app_key=${AKEY}`);let f=d?.features||(Array.isArray(d)?d:null);if(!f?.length)throw new Error('Nessuna linea');allLn=f.map(x=>{const p=x.properties||x;return{code:p.CODI_LINIA||'',name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||''}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));allLn.sort((a,b)=>natS(a.name,b.name));lnLoaded=true;renderLn();tst('Linee',allLn.length+' diurne')}catch(e){document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore</div><div class="error-detail">${e.message}</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`}document.getElementById('lnLoad').classList.add('hidden')}
+// CACHE AGGRESSIVA DELLE LINEE (Dura 7 Giorni)
+async function loadLn(){
+    if (lnLoaded) { renderLn(); return; } // Già caricato in memoria per questa sessione
+    
+    document.getElementById('lnLoad').classList.remove('hidden');
+    document.getElementById('lnContent').innerHTML='';
+    
+    const lsKey = 'tmb_all_lines_cache_v2';
+    const cached = localStorage.getItem(lsKey);
+    let f = null;
+    
+    if(cached){
+        try {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.t < 86400000 * 7) f = parsed.d;
+        } catch(e){}
+    }
+    
+    try{
+        if(!f) {
+            const d=await F(`${BU}/transit/linies/bus?app_id=${AID}&app_key=${AKEY}`);
+            f=d?.features||(Array.isArray(d)?d:null);
+            if(f) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: f})); } catch(e){}
+        }
+        
+        if(!f?.length)throw new Error('Nessuna linea');
+        allLn=f.map(x=>{const p=x.properties||x;return{code:p.CODI_LINIA||'',name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||''}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+        allLn.sort((a,b)=>natS(a.name,b.name));
+        lnLoaded=true;
+        renderLn();
+    }catch(e){
+        document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore</div><div class="error-detail">${e.message}</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
+    }
+    document.getElementById('lnLoad').classList.add('hidden');
+}
+
 function renderLn(flt=''){const c=document.getElementById('lnContent');let fl=allLn;if(flt){const q=flt.toLowerCase();fl=allLn.filter(l=>l.name.toLowerCase().includes(q)||l.desc.toLowerCase().includes(q))}const g={};fl.forEach(l=>{const u=l.name.toUpperCase();let p=/^\d/.test(u)?'Numeriche':u[0];if(!g[p])g[p]=[];g[p].push(l)});let h='';['Numeriche','H','V','D','X'].forEach(k=>{if(!g[k]?.length)return;h+=`<h3 class="font-bold text-gray-600 mb-2 text-xs">${k==='Numeriche'?'Numeriche':k} (${g[k].length})</h3><div class="lines-grid mb-4">`;g[k].forEach(l=>h+=`<div class="line-grid-item" onclick="loadLS('${l.code}','${l.name}')"><div class="line-num ${gLCC(l.name)}">${l.name}</div><div class="line-label">${l.origin?l.origin.substring(0,8):''}</div></div>`);h+='</div>'});if(!fl.length)h='<p class="text-center text-gray-400 py-4 text-xs">Nessuna linea</p>';c.innerHTML=h}
 function fltLn(){renderLn(document.getElementById('lnSearch').value.trim())}
 
-// REFACTORED: Better Direction & Ordering Logic
+// REFACTORED: Better Direction & Ordering Logic CON SESSION CACHE
 async function loadLS(lc,ln){
     clName=ln;clCode=lc;aDir='a';
     const c=document.getElementById('lnContent');
     c.innerHTML='<div class="py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>';
     
-    // Find metadata for this line to get official Origin/Dest (e.g., "Pg. Zona Franca", "Forum")
     const lineMeta = allLn.find(l => l.code == lc) || {origin: '', dest: ''};
 
     try{
-        const d=await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`);
+        // CACHE TRACCIATO PER 1 ORA IN SESSION STORAGE (Velocissimo tornare indietro)
+        const d=await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 3600000); 
         let f=d?.features||(Array.isArray(d)?d:null);
         if(!f?.length)throw new Error('Nessuna fermata');
         
-        // Parse raw features
         const all=f.map(x=>{
             const p=x.properties||x;
             return{
@@ -365,62 +483,38 @@ async function loadLS(lc,ln){
                 name:p.NOM_PARADA||p.nom_parada||'Fermata',
                 lat:x.geometry?x.geometry.coordinates[1]:0,
                 lon:x.geometry?x.geometry.coordinates[0]:0,
-                variant:String(p.CODI_VARIANT||p.codi_variant||p.SENTIT||'0'), // Important for grouping
-                order:parseInt(p.ORDRE_PARADA||p.ordre_parada||0)||0, // Important for sorting
+                variant:String(p.CODI_VARIANT||p.codi_variant||p.SENTIT||'0'),
+                order:parseInt(p.ORDRE_PARADA||p.ordre_parada||0)||0,
                 dest_sentit: p.DESTI_SENTIT || '' 
             }
         }).filter(s=>s.code);
 
-        // Group stops by variant ID
         const variantsMap = {};
         all.forEach(s => {
             if(!variantsMap[s.variant]) variantsMap[s.variant] = [];
             variantsMap[s.variant].push(s);
         });
 
-        // Convert to array and sort by length (longest variants first = main routes)
-        // This filters out "garage trips" or short partial routes
         const sortedVariants = Object.values(variantsMap).sort((a,b) => b.length - a.length);
 
         if(sortedVariants.length >= 1){
-            // Main Route 1
-            let group1 = sortedVariants[0].sort((a,b)=>a.order-b.order); // Strict order sort
-            
-            // Main Route 2 (if exists)
+            let group1 = sortedVariants[0].sort((a,b)=>a.order-b.order);
             let group2 = sortedVariants.length > 1 ? sortedVariants[1].sort((a,b)=>a.order-b.order) : [];
 
-            // Assign to global state
             clStops.a = group1;
             clStops.r = group2;
             
-            // INTELLIGENT LABELING based on END STOP vs Line Metadata
-            // Standard: Line Origin -> Line Dest (Direction 1)
-            // Standard: Line Dest -> Line Origin (Direction 2)
-            
-            // Get last stop names of both groups
             const last1 = group1[group1.length-1]?.name.toUpperCase() || '';
-            const last2 = group2.length ? group2[group2.length-1]?.name.toUpperCase() : '';
             const metaDest = lineMeta.dest.toUpperCase();
             const metaOrigin = lineMeta.origin.toUpperCase();
 
-            // Heuristic: If group1 ends near "Dest", label it "Verso Dest"
-            // If group1 ends near "Origin", label it "Verso Origin"
-            
-            // Default labels
             let label1 = lineMeta.dest ? `${lineMeta.dest}` : 'Andata';
             let label2 = lineMeta.origin ? `${lineMeta.origin}` : 'Ritorno';
 
-            // Swap if logic detects otherwise
-            // Check if Group 1 is actually going to Origin
             if(metaOrigin && last1.includes(metaOrigin.split('/')[0].trim().toUpperCase())) {
                 label1 = `${lineMeta.origin}`;
                 label2 = `${lineMeta.dest}`;
             } 
-            // Check if Group 1 destination matches the stop's internal dest_sentit
-            else if(group1[0]?.dest_sentit){
-                 // Fallback to internal data if matches well
-                 // But official metadata is usually cleaner text
-            }
 
             clStops.aLabel = label1;
             clStops.rLabel = label2;
@@ -431,9 +525,7 @@ async function loadLS(lc,ln){
         }
         
         renderLV('');
-        // Map will now clear and show ONLY this line's stops
         addLnMkrs(clStops[aDir]);
-        tst('Linea '+ln,`${clStops.a.length}+${clStops.r.length} fermate`)
     }catch(e){
         c.innerHTML=`<div class="mb-3"><button onclick="renderLn(document.getElementById('lnSearch').value)" class="text-xs text-red-500 font-semibold">← Torna</button></div><div class="error-box"><div class="error-title">Errore</div><div class="error-detail">${e.message}</div><button onclick="loadLS('${lc}','${ln}')" class="btn-retry">Riprova</button></div>`
     }
@@ -449,7 +541,6 @@ function renderLV(fq){
     let matched=new Set();
     if(q)stops.forEach(s=>{if(s.name.toLowerCase().includes(q)||s.code.toString().includes(q))matched.add(s.code)});
     
-    // Labels are now pre-calculated correctly
     const labelA = clStops.aLabel;
     const labelR = clStops.rLabel;
 
