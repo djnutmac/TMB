@@ -406,6 +406,10 @@ async function doSearch(sil=false){
             if(!sil){
                 getStopAllLines(code,[]).then(allLines=>{
                     renderIntersections(allLines, code);
+                });
+            }
+        }
+    }catch(e){
         if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore API TMB.';document.getElementById('errBox').classList.remove('hidden')}
     }
 }
