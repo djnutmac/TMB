@@ -276,10 +276,13 @@ function raceSuccess(promises) {
     });
 }
 
-// MOTORE DI RETE: Parallelizzazione Estrema e Hard-Timeout per evitare blocchi
+// MOTORE TMB: proxy multipli solo per TMB (necessita CORS bypass)
 async function F(url, ttl = 0, isAMB = false) {
+    // Se isAMB=true, delega a FAMB() per evitare i 3 proxy paralleli
+    if (isAMB) return FAMB(url, ttl);
+
     if (ttl > 0) {
-        const cached = localStorage.getItem('tmbf_' + url); 
+        const cached = localStorage.getItem('tmbf_' + url);
         if (cached) {
             try {
                 const p = JSON.parse(cached);
@@ -287,22 +290,22 @@ async function F(url, ttl = 0, isAMB = false) {
             } catch(e){}
         }
     }
-    
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500); // MAX 4.5 SECONDI
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
 
     const p1 = fetch(url, { signal: controller.signal }).then(r => {
         if(!r.ok) throw new Error();
         return r.json().catch(async () => JSON.parse(await r.text()));
     });
-    
+
     const p2 = fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}&disableCache=true`, { signal: controller.signal })
         .then(r => r.json())
         .then(d => {
             if(!d || !d.contents) throw new Error();
             return typeof d.contents === 'string' ? JSON.parse(d.contents) : d.contents;
         });
-        
+
     const p3 = fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { signal: controller.signal })
         .then(r => {
             if(!r.ok) throw new Error();
@@ -318,8 +321,36 @@ async function F(url, ttl = 0, isAMB = false) {
         return res;
     } catch(e) {
         clearTimeout(timeoutId);
-        if (isAMB) return null; // Se cade AMB, semplicemente lo ignora
         throw new Error('Network error');
+    }
+}
+
+// MOTORE AMB: chiamata diretta senza proxy — AMB non ha restrizioni CORS
+// Ritorna null in caso di errore (mai throw), così il chiamante può ignorare silenziosamente
+async function FAMB(url, ttl = 0) {
+    if (ttl > 0) {
+        const cached = localStorage.getItem('tmbf_' + url);
+        if (cached) {
+            try {
+                const p = JSON.parse(cached);
+                if (Date.now() - p.t < ttl) return p.d;
+            } catch(e){}
+        }
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    try {
+        const r = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!r.ok) return null;
+        const res = await r.json().catch(() => null);
+        if (ttl > 0 && res) {
+            try { localStorage.setItem('tmbf_' + url, JSON.stringify({t: Date.now(), d: res})); } catch(e){}
+        }
+        return res;
+    } catch(e) {
+        clearTimeout(timeoutId);
+        return null;
     }
 }
 
@@ -428,16 +459,23 @@ function openLine(lineCode, lineName){
     setTimeout(()=>loadLS(lineCode,lineName),100);
 }
 
-// Chiamate AMB Real-time sicure
+// Chiamate AMB Real-time — prova più endpoint in sequenza
 async function fetchAMBRealTime(code) {
-    try {
-        const res = await F(`${AMB_BU}/estimacions/${code}`, 0, true);
-        if(res && (Array.isArray(res) || res.estimacions || res.data)) return res;
-    } catch(e) {}
-    try {
-        const res2 = await F(`${AMB_BU}/timebus/${code}`, 0, true);
-        if(res2 && (Array.isArray(res2) || res2.estimacions || res2.data)) return res2;
-    } catch(e) {}
+    // Endpoint noti AMB Mobilitat (in ordine di priorità)
+    const endpoints = [
+        `${AMB_BU}/timebus/${code}`,
+        `${AMB_BU}/parades/${code}/temps`,
+        `${AMB_BU}/estimacions/${code}`,
+        `${AMB_BU}/parades/${code}/properes`
+    ];
+    for (const url of endpoints) {
+        const res = await FAMB(url);
+        if (!res) continue;
+        // Normalizza la risposta: array diretto, o wrapper con chiave nota
+        const arr = Array.isArray(res) ? res
+            : (res.estimacions || res.data || res.parades || res.timebus || res.properes || null);
+        if (arr && arr.length > 0) return arr;
+    }
     return null;
 }
 
@@ -492,13 +530,14 @@ async function doSearch(sil=false){
         }
         
         if(dataAMB) {
-            let ambArr = Array.isArray(dataAMB) ? dataAMB : (dataAMB.estimacions || dataAMB.data || []);
+            // fetchAMBRealTime restituisce già un array normalizzato
+            let ambArr = Array.isArray(dataAMB) ? dataAMB : [];
             let ambFormatted = ambArr.map(e => ({
-                line: e.linia || e.idLinia || 'AMB',
-                destination: e.desti || e.destinazione || e.nomDesti || '',
-                't-in-min': e.tempsInMin || e.minuts || e.tempsMinuts || (e.tempsSegons?Math.round(e.tempsSegons/60):0),
+                line: e.linia || e.idLinia || e.linea || 'AMB',
+                destination: e.desti || e.destinazione || e.nomDesti || e.destino || '',
+                't-in-min': e.tempsInMin || e.minuts || e.tempsMinuts || (e.tempsSegons ? Math.round(e.tempsSegons / 60) : 0),
                 provider: 'AMB',
-                'text-ca': e.text || ''
+                'text-ca': e.text || e.observacions || ''
             }));
             buses = [...buses, ...ambFormatted];
         }
@@ -538,9 +577,9 @@ function rQF(){const c=document.getElementById('favBtns'),w=document.getElementB
 function rFL(){const c=document.getElementById('favList');if(!fav.length){c.innerHTML='<p class="p-3 text-gray-400 text-center text-xs">—</p>';return}c.innerHTML=fav.map(f=>`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${f.code}')"><span class="font-bold text-red-600 text-xs">${f.code}</span> <span class="text-gray-600 text-xs">${f.name}</span></div><button onclick="fav=fav.filter(x=>x.code!=='${f.code}');localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rQF()" class="text-gray-300 hover:text-red-500 text-sm px-1">✕</button></div>`).join('')}
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
-// AGGIORNATA LA CHIAVE DELLA CACHE ALLA v10 PER PULIRE TELEFONO
+// AGGIORNATA LA CHIAVE DELLA CACHE ALLA v11 PER PULIRE DATI AMB VECCHI
 async function loadAllS(){
-    const lsKey = 'tmbf_all_stops_v10_amb';
+    const lsKey = 'tmbf_all_stops_v11_amb';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -567,18 +606,26 @@ async function loadAllS(){
                 provider:'TMB'
             })).filter(s=>s.code);
         }
-        if (d_amb.status === 'fulfilled') {
-            const arr = Array.isArray(d_amb.value) ? d_amb.value : (d_amb.value?.features || d_amb.value?.parades || []);
-            ambStops = arr.map(f=>{
-                let p = f.properties || f;
+        if (d_amb.status === 'fulfilled' && d_amb.value) {
+            const raw = d_amb.value;
+            // AMB può rispondere con array diretto, features GeoJSON, o oggetto con varie chiavi
+            const arr = Array.isArray(raw) ? raw
+                : (raw.features || raw.parades || raw.data || raw.stops || []);
+            ambStops = arr.map(f => {
+                const p = f.properties || f;
+                const lat = f.geometry ? f.geometry.coordinates[1] : (p.lat || p.latitud || p.y || null);
+                const lon = f.geometry ? f.geometry.coordinates[0] : (p.lon || p.longitud || p.x || null);
                 return {
-                    code:String(p.codiParada||p.codi||p.id), 
-                    name:p.nomParada||p.nom||'Fermata AMB', 
-                    lat:f.geometry?f.geometry.coordinates[1]:(p.lat||p.latitud), 
-                    lon:f.geometry?f.geometry.coordinates[0]:(p.lon||p.longitud), 
-                    provider:'AMB'
-                }
-            }).filter(s=>s.code && s.code !== 'undefined');
+                    code: String(p.codiParada || p.codi || p.id || p.idParada || ''),
+                    name: p.nomParada || p.nom || p.descripcion || 'Fermata AMB',
+                    lat: lat ? parseFloat(lat) : null,
+                    lon: lon ? parseFloat(lon) : null,
+                    provider: 'AMB'
+                };
+            }).filter(s => s.code && s.code !== 'undefined' && s.code !== 'null');
+            console.log(`[AMB] Fermate caricate: ${ambStops.length}`);
+        } else {
+            console.warn('[AMB] loadAllS fallito:', d_amb.reason || 'nessun dato');
         }
         
         const merged = [...tmbStops, ...ambStops];
@@ -601,7 +648,7 @@ async function loadLn(){
     document.getElementById('lnLoad').classList.remove('hidden');
     document.getElementById('lnContent').innerHTML='';
     
-    const lsKey = 'tmbf_all_lines_v10_amb';
+    const lsKey = 'tmbf_all_lines_v11_amb';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -627,9 +674,24 @@ async function loadLn(){
             let res = d_tmb.value?.features || (Array.isArray(d_tmb.value)?d_tmb.value:[]);
             tmbLns = res.map(x=>{const p=x.properties||x;return{code:String(p.CODI_LINIA||''),name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||'',provider:'TMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
         }
-        if(d_amb.status === 'fulfilled') {
-            let res = Array.isArray(d_amb.value) ? d_amb.value : (d_amb.value?.features || d_amb.value?.linies || []);
-            ambLns = res.map(x=>{const p=x.properties||x;return{code:String(p.codiLinia||p.idLinia||p.id||p.codi||''),name:p.nomLinia||p.idLinia||p.nom||p.id||'?',desc:p.descripcio||p.nom||'',origin:p.origen||'',dest:p.desti||'',provider:'AMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+        if(d_amb.status === 'fulfilled' && d_amb.value) {
+            const raw = d_amb.value;
+            const arr = Array.isArray(raw) ? raw
+                : (raw.features || raw.linies || raw.data || raw.lines || []);
+            ambLns = arr.map(x => {
+                const p = x.properties || x;
+                return {
+                    code: String(p.codiLinia || p.idLinia || p.id || p.codi || ''),
+                    name: p.nomLinia || p.idLinia || p.nom || p.id || '?',
+                    desc: p.descripcio || p.nom || '',
+                    origin: p.origen || p.nomOrigen || '',
+                    dest: p.desti || p.nomDesti || '',
+                    provider: 'AMB'
+                };
+            }).filter(l => l.code && l.name && l.name !== '?');
+            console.log(`[AMB] Linee caricate: ${ambLns.length}`);
+        } else {
+            console.warn('[AMB] loadLn fallito:', d_amb.reason || 'nessun dato');
         }
         
         allLn = [...tmbLns, ...ambLns].filter(l => l.name && l.name !== '?').sort((a,b)=>natS(a.name,b.name));
@@ -806,9 +868,11 @@ async function lNbA(code, provider){const c=document.getElementById('nb-'+code);
     let b = [];
     if(provider==='AMB'){
         const da = await fetchAMBRealTime(code).catch(()=>null);
-        if(da) {
-             let arr = Array.isArray(da) ? da : (da.estimacions || da.data || []);
-             b = arr.map(e => ({line: e.linia||e.idLinia, 't-in-min': e.tempsInMin||e.minuts||(e.tempsSegons?Math.round(e.tempsSegons/60):0)}));
+        if(da && da.length) {
+            b = da.map(e => ({
+                line: e.linia || e.idLinia || e.linea || 'AMB',
+                't-in-min': e.tempsInMin || e.minuts || (e.tempsSegons ? Math.round(e.tempsSegons / 60) : 0)
+            }));
         }
     } else {
         const d = await F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`);
@@ -823,11 +887,14 @@ let popS=null;
 async function mapClick(s){popS=s;document.getElementById('popN').textContent=s.name;document.getElementById('popC').textContent='#'+s.code;document.getElementById('mPop').classList.add('show');hlOnMap(s.code);try{
     let b = [];
     if(s.provider === 'AMB') {
-         const da = await fetchAMBRealTime(s.code).catch(()=>null);
-         if(da) {
-             let arr = Array.isArray(da) ? da : (da.estimacions || da.data || []);
-             b = arr.map(e => ({line: e.linia||e.idLinia, destination: e.desti||'', 't-in-min': e.tempsInMin||e.minuts||(e.tempsSegons?Math.round(e.tempsSegons/60):0)}));
-         }
+        const da = await fetchAMBRealTime(s.code).catch(()=>null);
+        if(da && da.length) {
+            b = da.map(e => ({
+                line: e.linia || e.idLinia || e.linea || 'AMB',
+                destination: e.desti || e.nomDesti || e.destino || '',
+                't-in-min': e.tempsInMin || e.minuts || (e.tempsSegons ? Math.round(e.tempsSegons / 60) : 0)
+            }));
+        }
     } else {
         const d=await F(`${BU}/ibus/stops/${s.code}?app_id=${AID}&app_key=${AKEY}`);
         if(d.data?.ibus?.length) b = d.data.ibus;
