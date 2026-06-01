@@ -260,6 +260,7 @@
 const AID='a5d88368',AKEY='4a578607c30c461a8fd7729700711337',BU='https://api.tmb.cat/v1';
 const AMB_BU='https://api.ambmobilitat.cat/v1';
 
+// MOTORE FETCH ULTRA OTTIMIZZATO (Timeout rigorosi e zero loop infiniti)
 async function F(url, ttl = 0, isAMB = false) {
     if (ttl > 0) {
         const cached = localStorage.getItem('tmbf_' + url); 
@@ -271,17 +272,25 @@ async function F(url, ttl = 0, isAMB = false) {
         }
     }
     
-    // Lista di Proxy Migliorata per garantire il bypass dei blocchi AMB
     const px=[
-        {u:x=>x, e:d=>d}, // 1. DIRETTO VELOCE
-        {u:x=>`https://api.allorigins.win/get?url=${encodeURIComponent(x)}&disableCache=true`, e:d=>JSON.parse(d.contents)}, // 2. Proxy Fallback Affidabile
-        {u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`, e:d=>d} // 3. Ultima spiaggia
+        {u:x=>x, e:d=>d}, 
+        {u:x=>`https://api.allorigins.win/get?url=${encodeURIComponent(x)}&disableCache=true`, e:d=>{
+            if(!d || !d.contents) throw new Error('No content');
+            return typeof d.contents === 'string' ? JSON.parse(d.contents) : d.contents;
+        }},
+        {u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`, e:d=>d}
     ];
     
     let er;
     for(const p of px){
         try{
-            const r=await fetch(p.u(url));
+            // Timeout stretto di 6 secondi per evitare il caricamento bloccato
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); 
+            
+            const r=await fetch(p.u(url), { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
             if(!r.ok)throw new Error('HTTP '+r.status);
             
             const ct = r.headers.get("content-type");
@@ -289,11 +298,12 @@ async function F(url, ttl = 0, isAMB = false) {
             if(ct && ct.includes("application/json")) {
                 data = await r.json();
             } else {
-                data = JSON.parse(await r.text());
+                const text = await r.text();
+                try { data = JSON.parse(text); } catch(e) { data = text; }
             }
             
             const res = p.e(data);
-            if (ttl > 0) {
+            if (ttl > 0 && res && !res.error) {
                 try { localStorage.setItem('tmbf_' + url, JSON.stringify({t: Date.now(), d: res})); } catch(e){}
             }
             return res;
@@ -309,7 +319,6 @@ let allS=[],fav=JSON.parse(localStorage.getItem('tmbF')||'[]'),curS=null,map=nul
 let allLn=[],lnLoaded=false,clStops={a:[],r:[],aLabel:'',rLabel:''},clName='',clCode='',aDir='a';
 let arOn=true,rSt={from:null,to:null},dTmr,abC=null;const sC=new Map();
 let stopLinesCache={};
-let ambRtPath=null; 
 
 function tst(t,m,e=false){const el=document.getElementById('toast');document.getElementById('tT').textContent=t;document.getElementById('tM').textContent=m;el.className='toast-notification'+(e?' error':'');el.style.display='block';setTimeout(()=>el.style.display='none',2800)}
 setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
@@ -408,25 +417,16 @@ function openLine(lineCode, lineName){
     setTimeout(()=>loadLS(lineCode,lineName),100);
 }
 
+// Chiamate AMB Real-time ottimizzate (Niente loop, percorsi diretti)
 async function fetchAMBRealTime(code) {
-    const paths = [
-        `/transit/estimacions/parada/${code}`,
-        `/transit/parades/${code}/estimacions`,
-        `/estimacions/${code}`,
-        `/timebus/${code}`
-    ];
-    if(ambRtPath) {
-        return await F(AMB_BU + ambRtPath.replace('{c}', code), 0, true).catch(()=>null);
-    }
-    for(let p of paths) {
-        try {
-            const res = await F(AMB_BU + p, 0, true);
-            if(res && (Array.isArray(res) || res.data || res.estimacions)) {
-                ambRtPath = p.replace(code, '{c}');
-                return res;
-            }
-        }catch(e){}
-    }
+    try {
+        const res = await F(`${AMB_BU}/estimacions/${code}`, 0, true);
+        if(res && (Array.isArray(res) || res.estimacions || res.data)) return res;
+    } catch(e) {}
+    try {
+        const res2 = await F(`${AMB_BU}/timebus/${code}`, 0, true);
+        if(res2 && (Array.isArray(res2) || res2.estimacions || res2.data)) return res2;
+    } catch(e) {}
     return null;
 }
 
@@ -527,9 +527,9 @@ function rQF(){const c=document.getElementById('favBtns'),w=document.getElementB
 function rFL(){const c=document.getElementById('favList');if(!fav.length){c.innerHTML='<p class="p-3 text-gray-400 text-center text-xs">—</p>';return}c.innerHTML=fav.map(f=>`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${f.code}')"><span class="font-bold text-red-600 text-xs">${f.code}</span> <span class="text-gray-600 text-xs">${f.name}</span></div><button onclick="fav=fav.filter(x=>x.code!=='${f.code}');localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rQF()" class="text-gray-300 hover:text-red-500 text-sm px-1">✕</button></div>`).join('')}
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
-// AGGIORNATA LA KEY CACHE A V6 PER FORZARE LO SCARICAMENTO PULITO
+// AGGIORNATA LA CHIAVE DELLA CACHE ALLA v8
 async function loadAllS(){
-    const lsKey = 'tmbf_all_stops_v6_amb';
+    const lsKey = 'tmbf_all_stops_v8_amb';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -543,57 +543,54 @@ async function loadAllS(){
     try {
         const [d_tmb, d_amb] = await Promise.allSettled([
             F(`${BU}/transit/parades?app_id=${AID}&app_key=${AKEY}`),
-            (async () => {
-                const paths = ['/transit/parades', '/parades', '/paradesbus'];
-                for(let p of paths) {
-                    try {
-                        const res = await F(AMB_BU + p, 0, true);
-                        if (!res) continue;
-                        let arr = Array.isArray(res) ? res : (res.features || res.parades || res.stops || res.data || res.records);
-                        if(!arr || !arr.length) {
-                            const poss = Object.values(res).find(v => Array.isArray(v));
-                            if(poss) arr = poss;
-                        }
-                        if(arr && arr.length > 0) return arr;
-                    } catch(e){}
-                }
-                return [];
-            })()
+            F(`${AMB_BU}/parades`, 0, true) // Link diretto senza loop infiniti
         ]);
         
         let tmbStops = [], ambStops = [];
-        if (d_tmb.status === 'fulfilled' && d_tmb.value.features) {
-            tmbStops = d_tmb.value.features.map(f=>({code:f.properties.CODI_PARADA||f.properties.CODI,name:f.properties.NOM_PARADA||f.properties.NOM||'Fermata TMB',lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0], provider:'TMB'})).filter(s=>s.code);
+        if (d_tmb.status === 'fulfilled' && d_tmb.value?.features) {
+            tmbStops = d_tmb.value.features.map(f=>({
+                code:String(f.properties.CODI_PARADA||f.properties.CODI),
+                name:f.properties.NOM_PARADA||f.properties.NOM||'Fermata TMB',
+                lat:f.geometry.coordinates[1],
+                lon:f.geometry.coordinates[0], 
+                provider:'TMB'
+            })).filter(s=>s.code);
         }
         if (d_amb.status === 'fulfilled') {
-            const arr = d_amb.value || [];
+            const arr = Array.isArray(d_amb.value) ? d_amb.value : (d_amb.value?.features || d_amb.value?.parades || []);
             ambStops = arr.map(f=>{
                 let p = f.properties || f;
-                return {code:p.codiParada||p.codi||p.id, name:p.nomParada||p.nom||'Fermata AMB', lat:f.geometry?f.geometry.coordinates[1]:(p.lat||p.latitud), lon:f.geometry?f.geometry.coordinates[0]:(p.lon||p.longitud), provider:'AMB'}
-            }).filter(s=>s.code);
+                return {
+                    code:String(p.codiParada||p.codi||p.id), 
+                    name:p.nomParada||p.nom||'Fermata AMB', 
+                    lat:f.geometry?f.geometry.coordinates[1]:(p.lat||p.latitud), 
+                    lon:f.geometry?f.geometry.coordinates[0]:(p.lon||p.longitud), 
+                    provider:'AMB'
+                }
+            }).filter(s=>s.code && s.code !== 'undefined');
         }
         
         const merged = [...tmbStops, ...ambStops];
         const unique = []; const map = new Map();
         for (const item of merged) {
+            if(!item.code) continue;
             if(!map.has(item.code)){
                 map.set(item.code, true); unique.push(item);
             }
         }
         
-        allS = unique.sort((a,b)=>parseInt(a.code)-parseInt(b.code));
+        allS = unique.sort((a,b)=>natS(a.code,b.code));
         if(allS.length) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allS})); } catch(e){}
         
     } catch(e) {}
 }
 
-// AGGIORNATA LA KEY CACHE A V6 PER FORZARE LO SCARICAMENTO PULITO DELLE LINEE
 async function loadLn(){
     if (lnLoaded) { renderLn(); return; } 
     document.getElementById('lnLoad').classList.remove('hidden');
     document.getElementById('lnContent').innerHTML='';
     
-    const lsKey = 'tmbf_all_lines_v6_amb';
+    const lsKey = 'tmbf_all_lines_v8_amb';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -611,35 +608,20 @@ async function loadLn(){
     try{
         const [d_tmb, d_amb] = await Promise.allSettled([
             F(`${BU}/transit/linies/bus?app_id=${AID}&app_key=${AKEY}`),
-            (async () => {
-                const paths = ['/transit/linies', '/linies', '/liniesbus'];
-                for(let p of paths) {
-                    try {
-                        const res = await F(AMB_BU + p, 0, true);
-                        if (!res) continue;
-                        let arr = Array.isArray(res) ? res : (res.features || res.linies || res.lines || res.data || res.records);
-                        if(!arr || !arr.length) {
-                            const poss = Object.values(res).find(v => Array.isArray(v));
-                            if(poss) arr = poss;
-                        }
-                        if(arr && arr.length > 0) return arr;
-                    } catch(e){}
-                }
-                return [];
-            })()
+            F(`${AMB_BU}/linies`, 0, true) // Link diretto senza loop infiniti
         ]);
         
         let tmbLns = [], ambLns = [];
         if(d_tmb.status === 'fulfilled') {
             let res = d_tmb.value?.features || (Array.isArray(d_tmb.value)?d_tmb.value:[]);
-            tmbLns = res.map(x=>{const p=x.properties||x;return{code:p.CODI_LINIA||'',name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||'',provider:'TMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+            tmbLns = res.map(x=>{const p=x.properties||x;return{code:String(p.CODI_LINIA||''),name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||'',provider:'TMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
         }
         if(d_amb.status === 'fulfilled') {
-            let res = d_amb.value || [];
-            ambLns = res.map(x=>{const p=x.properties||x;return{code:p.codiLinia||p.idLinia||p.id||p.codi||'',name:p.nomLinia||p.idLinia||p.nom||p.id||'?',desc:p.descripcio||p.nom||'',origin:p.origen||'',dest:p.desti||'',provider:'AMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+            let res = Array.isArray(d_amb.value) ? d_amb.value : (d_amb.value?.features || d_amb.value?.linies || []);
+            ambLns = res.map(x=>{const p=x.properties||x;return{code:String(p.codiLinia||p.idLinia||p.id||p.codi||''),name:p.nomLinia||p.idLinia||p.nom||p.id||'?',desc:p.descripcio||p.nom||'',origin:p.origen||'',dest:p.desti||'',provider:'AMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
         }
         
-        allLn = [...tmbLns, ...ambLns].sort((a,b)=>natS(a.name,b.name));
+        allLn = [...tmbLns, ...ambLns].filter(l => l.name && l.name !== '?').sort((a,b)=>natS(a.name,b.name));
         if(allLn.length) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allLn})); } catch(e){}
         lnLoaded=true; renderLn();
     }catch(e){
@@ -688,21 +670,9 @@ async function loadLS(lc,ln){
     try{
         let d, f = [];
         if(lineMeta.provider === 'AMB') {
-            const paths = [`/transit/linies/${lc}/parades`, `/linies/${lc}/parades`, `/parades/linia/${lc}`, `/transit/linies/${lc}`];
-            for(let p of paths) {
-                d = await F(AMB_BU + p, 1800000, true).catch(()=>null);
-                if(d) {
-                    let poss = Array.isArray(d) ? d : (d.features || d.parades || d.data || d.records);
-                    if(!poss || !poss.length) {
-                        const foundArray = Object.values(d).find(v => Array.isArray(v));
-                        if(foundArray) poss = foundArray;
-                    }
-                    if(poss && poss.length) {
-                        f = poss;
-                        break;
-                    }
-                }
-            }
+            d = await F(`${AMB_BU}/linies/${lc}/parades`, 1800000, true).catch(()=>null);
+            if (!d) d = await F(`${AMB_BU}/parades/linia/${lc}`, 1800000, true).catch(()=>null);
+            f = d ? (Array.isArray(d) ? d : (d.features || d.parades || [])) : [];
         } else {
             d = await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 1800000); 
             f = d?.features||(Array.isArray(d)?d:null) || [];
