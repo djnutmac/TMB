@@ -31,9 +31,9 @@
         .bus-badge-sm{min-width:36px;padding:4px 8px;border-radius:6px;font-weight:700;text-align:center;color:white;font-size:.78rem;box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer;transition:all .2s;display:inline-block}
         .bus-badge-sm:hover{transform:scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,.25)}
         .line-normal{background:linear-gradient(135deg,#dc0530,#ff1744)}.line-v{background:linear-gradient(135deg,#00a651,#00c853)}.line-h{background:linear-gradient(135deg,#003888,#004bad)}.line-d{background:linear-gradient(135deg,#8e44ad,#ab47bc)}.line-x{background:linear-gradient(135deg,#1a1a1a,#424242)}
-        .time-display{font-size:.95rem;font-weight:700}.time-red{color:#dc0530}.time-orange{color:#e17055}.time-green{color:#00c853;animation:pg 1.5s ease-in-out infinite}
+        .time-display{font-size:1.5rem;font-weight:800;letter-spacing:-0.5px;line-height:1}.time-red{color:#dc0530}.time-orange{color:#e17055}.time-green{color:#00c853;animation:pg 1.5s ease-in-out infinite}
         @keyframes pg{0%,100%{opacity:1}50%{opacity:.5}}
-        
+        .tab-btn{position:relative;padding:10px 8px;font-weight:600;font-size:.72rem;color:#999;border:none;background:transparent;flex:1;white-space:nowrap;cursor:pointer;transition:all .2s}
         .card-bus{background:#fafafa;border:1px solid #eee}
         .input-modern{background:#f5f5f5;border:2px solid #e0e0e0;border-radius:10px;padding:10px 12px;color:#333;font-size:.88rem;width:100%;transition:all .3s}
         .input-modern:focus{outline:none;border-color:#dc0530;background:white;box-shadow:0 0 0 3px rgba(220,5,48,.1)}
@@ -70,10 +70,6 @@
         .stop-code-pill{background:#eee;color:#666;padding:1px 4px;border-radius:3px;font-size:.6rem;font-weight:600}
         .suggestions-list{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ddd;border-top:none;border-radius:0 0 10px 10px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:50;max-height:170px;overflow-y:auto;display:none}
         .suggestion-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:.82rem;color:#333}.suggestion-item:hover{background:#f9f9f9;color:#dc0530}
-        .ibus-display{background:#111;border:2px solid #333;border-radius:8px;padding:8px;margin-bottom:10px}
-        .ibus-row{display:flex;justify-content:space-between;padding:4px 6px;font-family:'Courier New',monospace;font-size:.82rem}
-        .ibus-line{color:#ffc107;font-weight:700;min-width:38px}.ibus-dest{color:#00c853;flex:1;margin:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .ibus-time{color:#ffc107;font-weight:700}.ibus-time.arriving{color:#ff1744;animation:pg .8s ease-in-out infinite}
         .toggle-container{display:flex;align-items:center;gap:6px;cursor:pointer}
         .toggle-switch{position:relative;width:30px;height:16px;background:#ddd;border-radius:8px;transition:background .3s}.toggle-switch.active{background:#00c853}
         .toggle-switch::after{content:'';position:absolute;width:12px;height:12px;background:white;border-radius:50%;top:2px;left:2px;transition:left .3s;box-shadow:0 1px 2px rgba(0,0,0,.2)}.toggle-switch.active::after{left:16px}
@@ -145,8 +141,7 @@
                     <div class="intersect-title">🔀 Intersezioni — Linee disponibili</div>
                     <div id="intersectLines" class="intersect-lines"></div>
                 </div>
-                <div id="ibusDsp" class="hidden"></div>
-                <div id="results" class="space-y-2"></div>
+                <div id="results" class="space-y-2 mt-3"></div>
                 <div id="conns" class="hidden mt-3 card-bus p-3 rounded-xl"><h3 class="font-bold text-gray-700 mb-2 text-xs">🚇 Metro</h3><div id="connList" class="flex flex-wrap gap-1"></div></div>
                 <div id="loading" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
                 <div id="errBox" class="hidden card-bus p-3 text-center rounded-xl"><p id="errTxt" class="text-gray-600 text-xs"></p></div>
@@ -360,7 +355,7 @@ async function doSearch(sil=false){
     if(sil&&lastC)code=lastC;if(!code)return;
     if(!/^\d+$/.test(code)&&!sil){const m=allS.find(x=>x.name.toLowerCase().includes(code.toLowerCase()));if(m){code=m.code;document.getElementById('stopCode').value=code}else{document.getElementById('errTxt').textContent='Non trovata.';document.getElementById('errBox').classList.remove('hidden');return}}
     lastC=code;if(arOn)startAR();
-    if(!sil){document.getElementById('loading').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('errBox').classList.add('hidden');document.getElementById('sInfo').classList.add('hidden');document.getElementById('conns').classList.add('hidden');document.getElementById('ibusDsp').classList.add('hidden');document.getElementById('intersectBox').classList.add('hidden'); clearMap();} 
+    if(!sil){document.getElementById('loading').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('errBox').classList.add('hidden');document.getElementById('sInfo').classList.add('hidden');document.getElementById('conns').classList.add('hidden');document.getElementById('intersectBox').classList.add('hidden'); clearMap();} 
     
     try{
         // DUE RICHIESTE API IN CONTEMPORANEA PER DIMEZZARE I TEMPI
@@ -390,11 +385,10 @@ async function doSearch(sil=false){
             let buses=allBuses.filter(x=>!x.line.toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']);
             
             if(!buses.length){
-                document.getElementById('errTxt').textContent='Nessun bus diurno.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('ibusDsp').classList.add('hidden');return
+                document.getElementById('errTxt').textContent='Nessun bus diurno.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';return
             }
             document.getElementById('errBox').classList.add('hidden');
-            rIbus(buses.slice(0,5),'ibusDsp');
-            document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-2.5 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x['text-ca']||''}</p></div></div><div class="flex-shrink-0">${fA(x['t-in-min'])}</div></div></div>`).join('');
+            document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-3 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x['text-ca']||''}</p></div></div><div class="flex-shrink-0 text-right">${fA(x['t-in-min'])}</div></div></div>`).join('');
 
             if(!sil){
                 const ibusLineNames=[...new Set(buses.map(b=>b.line))];
@@ -408,10 +402,10 @@ async function doSearch(sil=false){
                 if(cn.length){document.getElementById('connList').innerHTML=cn.map(x=>`<span class="connection-chip ${x.c}">${x.l}</span>`).join('');document.getElementById('conns').classList.remove('hidden')}
             }
         }else{
-            document.getElementById('errTxt').textContent='Nessun bus in arrivo.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('ibusDsp').classList.add('hidden');
-            if(!sil){getStopAllLines(code,[]).then(allLines=>{renderIntersections(allLines, code);});}
-        }
-    }catch(e){
+            document.getElementById('errTxt').textContent='Nessun bus in arrivo.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';
+            if(!sil){
+                getStopAllLines(code,[]).then(allLines=>{
+                    renderIntersections(allLines, code);
         if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore API TMB.';document.getElementById('errBox').classList.remove('hidden')}
     }
 }
@@ -476,12 +470,12 @@ async function loadLn(){
         allLn.sort((a,b)=>natS(a.name,b.name));
         lnLoaded=true; renderLn();
     }catch(e){
-        document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore</div><div class="error-detail">${e.message}</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
+        if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore API.';document.getElementById('errBox').classList.remove('hidden')}
     }
-    document.getElementById('lnLoad').classList.add('hidden');
 }
 
-function renderLn(flt=''){const c=document.getElementById('lnContent');let fl=allLn;if(flt){const q=flt.toLowerCase();fl=allLn.filter(l=>l.name.toLowerCase().includes(q)||l.desc.toLowerCase().includes(q))}const g={};fl.forEach(l=>{const u=l.name.toUpperCase();let p=/^\d/.test(u)?'Numeriche':u[0];if(!g[p])g[p]=[];g[p].push(l)});let h='';['Numeriche','H','V','D','X'].forEach(k=>{if(!g[k]?.length)return;h+=`<h3 class="font-bold text-gray-600 mb-2 text-xs">${k==='Numeriche'?'Numeriche':k} (${g[k].length})</h3><div class="lines-grid mb-4">`;g[k].forEach(l=>h+=`<div class="line-grid-item" onclick="loadLS('${l.code}','${l.name}')"><div class="line-num ${gLCC(l.name)}">${l.name}</div><div class="line-label">${l.origin?l.origin.substring(0,8):''}</div></div>`);h+='</div>'});if(!fl.length)h='<p class="text-center text-gray-400 py-4 text-xs">Nessuna linea</p>';c.innerHTML=h}
+function startAR(){stopAR();if(arOn)arInt=setInterval(()=>doSearch(true),15000)}
+function stopAR(){if(arInt){clearInterval(arInt);arInt=null}}
 function fltLn(){renderLn(document.getElementById('lnSearch').value.trim())}
 
 // CACHE DEL TRACCIATO IN MEMORIA SESSIONE (30 minuti di cache per ricaricamenti istantanei)
@@ -619,9 +613,9 @@ function hAI(inp,lid){clearTimeout(dTmr);const q=inp.value.trim();const list=doc
 function rMx(local,remote,lid){const list=document.getElementById(lid);list.innerHTML='';const all=[...local];if(remote?.length)remote.forEach(x=>all.push({t:'a',n:x.display_name,lat:x.lat,lon:x.lon}));if(!all.length){list.style.display='none';return}all.slice(0,6).forEach(item=>{const div=document.createElement('div');div.className='suggestion-item';let n=item.n;if(item.t==='a')n=n.split(',').slice(0,3).join(',');div.innerHTML=`${item.t==='s'?'🚏':'📍'} ${n}`;div.onclick=()=>{document.getElementById(lid==='fL'?'rFrom':'rTo').value=n;if(lid==='fL')rSt.from={lat:item.lat,lon:item.lon};else rSt.to={lat:item.lat,lon:item.lon};list.style.display='none'};list.appendChild(div)});list.style.display='block'}
 function useML(){const inp=document.getElementById('rFrom');inp.value='📍...';navigator.geolocation.getCurrentPosition(p=>{rSt.from={lat:p.coords.latitude,lon:p.coords.longitude};inp.value='📍 Posizione'},()=>{inp.value=''})}
 
-async function calcRoute(){const from=document.getElementById('rFrom').value,to=document.getElementById('rTo').value,rd=document.getElementById('rRes'),rl=document.getElementById('rLoad');if(!from||!to){tst('','Compila entrambi',true);return}rd.innerHTML='';rl.classList.remove('hidden');try{if(!rSt.from){const d=await F(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(from+', Barcelona')}&format=json&limit=1`);if(d[0])rSt.from={lat:d[0].lat,lon:d[0].lon}}if(!rSt.to){const d=await F(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(to+', Barcelona')}&format=json&limit=1`);if(d[0])rSt.to={lat:d[0].lat,lon:d[0].lon}}if(!rSt.from||!rSt.to)throw new Error('Indirizzo non trovato');const dt=new Date(),ds=`${(dt.getMonth()+1).toString().padStart(2,'0')}-${dt.getDate().toString().padStart(2,'0')}-${dt.getFullYear()}`,ts=`${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;const data=await F(`${BU}/planner/plan?fromPlace=${rSt.from.lat},${rSt.from.lon}&toPlace=${rSt.to.lat},${rSt.to.lon}&date=${ds}&time=${ts}&mode=BUS,WALK&app_id=${AID}&app_key=${AKEY}`);rl.classList.add('hidden');
-if(data.plan?.itineraries?.length){const bi=data.plan.itineraries.filter(it=>it.legs.some(l=>l.mode==='BUS'));if(!bi.length){rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Solo a piedi</p></div>';return}mkrs.forEach(m=>map.removeLayer(m));mkrs=[];if(selMkr){map.removeLayer(selMkr);selMkr=null}
-bi.slice(0,3).forEach((it,idx)=>{const dur=Math.round(it.duration/60),st=new Date(it.startTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),et=new Date(it.endTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});let seg='',poly=[];it.legs.forEach(leg=>{if(leg.legGeometry?.points){let c='#dc0530',cu=false;if(leg.mode==='WALK')c='#999';if(leg.mode==='BUS'){const n=(leg.routeShortName||'').toUpperCase();if(n.startsWith('V')){c='#00a651';cu=true}else if(n.startsWith('H')){c='#003888';cu=true}else if(n.startsWith('D')){c='#8e44ad';cu=true}}poly.push({p:leg.legGeometry.points,c:(leg.routeColor&&!cu)?`#${leg.routeColor}`:c})}if(leg.mode==='WALK')seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:#fff;border-color:#ccc"></div><span class="segment-walk-info">🚶 ${Math.round(leg.duration/60)}'</span></div>`;else if(leg.mode==='BUS'){const ln=leg.routeShortName||leg.route;seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:#dc0530"></div><div class="segment-bus-info"><div class="flex items-center gap-2 mb-2"><div class="bus-badge ${gLC(ln)}" style="font-size:.8rem;padding:4px 7px;min-width:34px">${ln}</div><span class="text-xs text-gray-400">→ ${leg.headsign}</span></div><div><div class="stop-label">Sali</div><div class="stop-name-route">${leg.from.name} <span class="stop-code-pill">${leg.from.stopCode||''}</span></div></div><div class="text-center my-1 text-gray-200">↓</div><div><div class="stop-label">Scendi</div><div class="stop-name-route">${leg.to.name} <span class="stop-code-pill">${leg.to.stopCode||''}</span></div></div></div></div>`}});
+async function calcRoute(){const from=document.getElementById('rFrom').value,to=document.getElementById('rTo').value,rd=document.getElementById('rRes'),rl=document.getElementById('rLoad');if(!from||!to){tst('','Compila entrambi',true);return}rd.innerHTML='';rl.classList.remove('hidden');try{if(!rSt.from){const d=await F(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(from+', Barcelona')}&format=json&limit=1`);if(d[0])rSt.from={lat:d[0].lat,lon:d[0].lon}}if(!rSt.to){const d=await F(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(to+', Barcelona')}&format=json&limit=1`);if(d[0])rSt.to={lat:d[0].lat,lon:d[0].lon}}if(!rSt.from||!rSt.to)throw new Error('Indirizzo non trovato');const dt=new Date(),ds=`${(dt.getMonth()+1).toString().padStart(2,'0')}-${dt.getDate().toString().padStart(2,'0')}-${dt.getFullYear()}`,ts=`${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;const data=await F(`${BU}/planner/plan?fromPlace=${rSt.from.lat},${rSt.from.lon}&toPlace=${rSt.to.lat},${rSt.to.lon}&date=${ds}&time=${ts}&mode=TRANSIT,WALK&app_id=${AID}&app_key=${AKEY}`);rl.classList.add('hidden');
+if(data.plan?.itineraries?.length){const bi=data.plan.itineraries.filter(it=>it.legs.some(l=>l.mode!=='WALK'));if(!bi.length){rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun mezzo pubblico, solo a piedi</p></div>';return}mkrs.forEach(m=>map.removeLayer(m));mkrs=[];if(selMkr){map.removeLayer(selMkr);selMkr=null}
+bi.slice(0,3).forEach((it,idx)=>{const dur=Math.round(it.duration/60),st=new Date(it.startTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),et=new Date(it.endTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});let seg='',poly=[];it.legs.forEach(leg=>{if(leg.legGeometry?.points){let c='#dc0530';if(leg.mode==='WALK')c='#999';else if(leg.routeColor)c=`#${leg.routeColor}`;else if(leg.mode==='SUBWAY')c='#e2241a';const n=(leg.routeShortName||'').toUpperCase();if(leg.mode==='BUS'){if(n.startsWith('V'))c='#00a651';else if(n.startsWith('H'))c='#003888';else if(n.startsWith('D'))c='#8e44ad';}poly.push({p:leg.legGeometry.points,c:c})}if(leg.mode==='WALK')seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:#fff;border-color:#ccc"></div><span class="segment-walk-info">🚶 ${Math.round(leg.duration/60)}'</span></div>`;else{const ln=leg.routeShortName||leg.route;let icn='🚌';if(leg.mode==='SUBWAY')icn='🚇';else if(leg.mode==='TRAM')icn='🚋';else if(leg.mode==='RAIL')icn='🚆';let bg=leg.routeColor?`background:#${leg.routeColor};`:'';let cls='bus-badge ';if(leg.mode==='BUS'&&ln.match(/^[VHDX]/i))cls+=gLC(ln);else if(!bg)bg='background:#333;';seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:${leg.routeColor?`#${leg.routeColor}`:'#dc0530'}"></div><div class="segment-bus-info"><div class="flex items-center gap-2 mb-2"><div class="${cls}" style="${bg}font-size:.8rem;padding:4px 7px;min-width:34px">${icn} ${ln}</div><span class="text-xs text-gray-500 font-medium truncate">→ ${leg.headsign}</span></div><div><div class="stop-label">Sali</div><div class="stop-name-route">${leg.from.name}</div></div><div class="text-center my-1 text-gray-300 font-bold">↓</div><div><div class="stop-label">Scendi</div><div class="stop-name-route">${leg.to.name}</div></div></div></div>`}});
 rd.innerHTML+=`<div class="route-card fade-in"><div class="route-summary"><div class="route-time">${st}-${et}</div><div class="route-duration">${dur}'</div></div><div class="pl-2">${seg}</div></div>`;if(idx===0){let bounds=[];poly.forEach(p=>{const ll=decPL(p.p);const pl=L.polyline(ll,{color:p.c,weight:4}).addTo(map);mkrs.push(pl);bounds=bounds.concat(ll)});if(bounds.length)map.fitBounds(bounds,{padding:[40,40]})}})}else rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun percorso</p></div>'}catch(e){rl.classList.add('hidden');rd.innerHTML=`<div class="card-bus p-3 text-center rounded-xl"><p class="text-red-500 font-bold text-xs">Errore</p><p class="text-gray-400 text-xs">${e.message}</p></div>`}}
 
 document.addEventListener('DOMContentLoaded',async()=>{initMap();await loadAllS();rQF();document.addEventListener('click',e=>{if(!e.target.closest('.search-input-wrapper')&&!e.target.closest('.stop-suggestions'))cSug();if(!e.target.closest('.suggestions-list')&&!e.target.closest('.input-modern'))document.querySelectorAll('.suggestions-list').forEach(l=>l.style.display='none');if(!e.target.closest('.map-stop-popup')&&!e.target.closest('.leaflet-marker-icon'))document.getElementById('mPop').classList.remove('show')})});
