@@ -474,9 +474,12 @@ async function loadLn(){
         allLn.sort((a,b)=>natS(a.name,b.name));
         lnLoaded=true; renderLn();
     }catch(e){
-        if(!sil){document.getElementById('loading').classList.add('hidden');document.getElementById('errTxt').textContent='Errore API.';document.getElementById('errBox').classList.remove('hidden')}
+        document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore</div><div class="error-detail">${e.message}</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
     }
+    document.getElementById('lnLoad').classList.add('hidden');
 }
+
+function renderLn(flt=''){const c=document.getElementById('lnContent');let fl=allLn;if(flt){const q=flt.toLowerCase();fl=allLn.filter(l=>l.name.toLowerCase().includes(q)||l.desc.toLowerCase().includes(q))}const g={};fl.forEach(l=>{const u=l.name.toUpperCase();let p=/^\d/.test(u)?'Numeriche':u[0];if(!g[p])g[p]=[];g[p].push(l)});let h='';['Numeriche','H','V','D','X'].forEach(k=>{if(!g[k]?.length)return;h+=`<h3 class="font-bold text-gray-600 mb-2 text-xs">${k==='Numeriche'?'Numeriche':k} (${g[k].length})</h3><div class="lines-grid mb-4">`;g[k].forEach(l=>h+=`<div class="line-grid-item" onclick="loadLS('${l.code}','${l.name}')"><div class="line-num ${gLCC(l.name)}">${l.name}</div><div class="line-label">${l.origin?l.origin.substring(0,8):''}</div></div>`);h+='</div>'});if(!fl.length)h='<p class="text-center text-gray-400 py-4 text-xs">Nessuna linea</p>';c.innerHTML=h}
 
 function startAR(){stopAR();if(arOn)arInt=setInterval(()=>doSearch(true),15000)}
 function stopAR(){if(arInt){clearInterval(arInt);arInt=null}}
