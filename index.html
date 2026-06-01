@@ -42,7 +42,6 @@
         .line-amb-e{background:linear-gradient(135deg,#e3001b,#ff1744); color: white;} 
         .line-amb-n{background:linear-gradient(135deg,#1a1a1a,#000); color: #fce300;} 
         
-        /* Font dei minuti ingrandito per una lettura immediata */
         .time-display{font-size:1.8rem;font-weight:800;letter-spacing:-1px;line-height:1;text-shadow: 0 1px 2px rgba(0,0,0,0.05);}
         .time-red{color:#dc0530}.time-orange{color:#e17055}.time-green{color:#00c853;animation:pg 1.5s ease-in-out infinite}
         @keyframes pg{0%,100%{opacity:1}50%{opacity:.5}}
@@ -272,9 +271,11 @@ async function F(url, ttl = 0, isAMB = false) {
         }
     }
     
+    // Lista di Proxy Migliorata per garantire il bypass dei blocchi AMB
     const px=[
         {u:x=>x, e:d=>d}, // 1. DIRETTO VELOCE
-        {u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`, e:d=>d} // 2. Proxy
+        {u:x=>`https://api.allorigins.win/get?url=${encodeURIComponent(x)}&disableCache=true`, e:d=>JSON.parse(d.contents)}, // 2. Proxy Fallback Affidabile
+        {u:x=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`, e:d=>d} // 3. Ultima spiaggia
     ];
     
     let er;
@@ -332,7 +333,7 @@ function gLC(l){
     if(u.startsWith('M'))return'line-amb-m'; 
     if(u.startsWith('E'))return'line-amb-e';
     if(u.startsWith('N'))return'line-amb-n';
-    if(u.startsWith('L')||u.startsWith('B')||u.startsWith('CJ')||u.startsWith('JM'))return'line-amb';
+    if(u.startsWith('L')||u.startsWith('B')||u.startsWith('C')||u.startsWith('J'))return'line-amb';
     return'line-normal';
 }
 
@@ -343,7 +344,7 @@ function gLCC(n){
     if(u.startsWith('D'))return'purple';
     if(u.startsWith('M'))return'amb-m';
     if(u.startsWith('E'))return'amb-e';
-    if(u.startsWith('L')||u.startsWith('B')||u.startsWith('CJ')||u.startsWith('JM')||u.startsWith('N'))return'amb';
+    if(u.startsWith('L')||u.startsWith('B')||u.startsWith('C')||u.startsWith('J')||u.startsWith('N'))return'amb';
     return'';
 }
 
@@ -526,8 +527,9 @@ function rQF(){const c=document.getElementById('favBtns'),w=document.getElementB
 function rFL(){const c=document.getElementById('favList');if(!fav.length){c.innerHTML='<p class="p-3 text-gray-400 text-center text-xs">—</p>';return}c.innerHTML=fav.map(f=>`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${f.code}')"><span class="font-bold text-red-600 text-xs">${f.code}</span> <span class="text-gray-600 text-xs">${f.name}</span></div><button onclick="fav=fav.filter(x=>x.code!=='${f.code}');localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rQF()" class="text-gray-300 hover:text-red-500 text-sm px-1">✕</button></div>`).join('')}
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
+// AGGIORNATA LA KEY CACHE A V6 PER FORZARE LO SCARICAMENTO PULITO
 async function loadAllS(){
-    const lsKey = 'tmbf_all_stops_v5_amb';
+    const lsKey = 'tmbf_all_stops_v6_amb';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -585,12 +587,13 @@ async function loadAllS(){
     } catch(e) {}
 }
 
+// AGGIORNATA LA KEY CACHE A V6 PER FORZARE LO SCARICAMENTO PULITO DELLE LINEE
 async function loadLn(){
     if (lnLoaded) { renderLn(); return; } 
     document.getElementById('lnLoad').classList.remove('hidden');
     document.getElementById('lnContent').innerHTML='';
     
-    const lsKey = 'tmbf_all_lines_v5_amb';
+    const lsKey = 'tmbf_all_lines_v6_amb';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -633,7 +636,7 @@ async function loadLn(){
         }
         if(d_amb.status === 'fulfilled') {
             let res = d_amb.value || [];
-            ambLns = res.map(x=>{const p=x.properties||x;return{code:p.codiLinia||p.id||p.codi||'',name:p.nomLinia||p.nom||p.id||'?',desc:p.descripcio||'',origin:p.origen||'',dest:p.desti||'',provider:'AMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+            ambLns = res.map(x=>{const p=x.properties||x;return{code:p.codiLinia||p.idLinia||p.id||p.codi||'',name:p.nomLinia||p.idLinia||p.nom||p.id||'?',desc:p.descripcio||p.nom||'',origin:p.origen||'',dest:p.desti||'',provider:'AMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
         }
         
         allLn = [...tmbLns, ...ambLns].sort((a,b)=>natS(a.name,b.name));
