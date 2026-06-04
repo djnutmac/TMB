@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TMB & AMB Barcelona - Bus Monitor</title>
+    <title>TMB Barcelona - Bus Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -26,7 +26,6 @@
         @media(max-width:768px){.main-split{flex-direction:column}.panel-left{width:100%;height:50%;min-width:unset;border-right:none;border-bottom:1px solid #e0e0e0}.panel-right{width:100%;height:50%}}
         #map{width:100%;height:100%;position:absolute;top:0;left:0;right:0;bottom:0}
         .gradient-red{background:linear-gradient(135deg,#dc0530,#ff1744)}
-        .gradient-amb{background:linear-gradient(135deg,#ffde00,#ffc107)}
         
         .bus-badge{min-width:46px;padding:6px 10px;border-radius:8px;font-weight:700;text-align:center;color:white;font-size:.95rem;letter-spacing:-.5px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
         .bus-badge-sm{min-width:36px;padding:4px 8px;border-radius:6px;font-weight:700;text-align:center;color:white;font-size:.78rem;box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer;transition:all .2s;display:inline-block}
@@ -37,10 +36,6 @@
         .line-h{background:linear-gradient(135deg,#003888,#004bad); color: white;}
         .line-d{background:linear-gradient(135deg,#8e44ad,#ab47bc); color: white;}
         .line-x{background:linear-gradient(135deg,#1a1a1a,#424242); color: white;}
-        .line-amb{background:linear-gradient(135deg,#ffde00,#ffc107); color: #000;} 
-        .line-amb-m{background:linear-gradient(135deg,#0081c2,#00a0f0); color: white;} 
-        .line-amb-e{background:linear-gradient(135deg,#e3001b,#ff1744); color: white;} 
-        .line-amb-n{background:linear-gradient(135deg,#1a1a1a,#000); color: #fce300;} 
         
         .time-display{font-size:1.8rem;font-weight:800;letter-spacing:-1px;line-height:1;text-shadow: 0 1px 2px rgba(0,0,0,0.05);}
         .time-red{color:#dc0530}.time-orange{color:#e17055}.time-green{color:#00c853;animation:pg 1.5s ease-in-out infinite}
@@ -65,6 +60,7 @@
         .bus-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
         .bus-info{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
         .bus-destination{flex:1;min-width:0}.bus-destination p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        
         .nearby-stop{background:white;border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .2s}.nearby-stop:hover{border-color:#dc0530}
         .distance-badge{background:#e3f2fd;color:#1976d2;padding:3px 8px;border-radius:12px;font-size:.68rem;font-weight:600}
         .location-btn{position:absolute;bottom:14px;right:14px;z-index:1000;width:38px;height:38px;background:white;border:2px solid #ddd;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)}.location-btn:hover{border-color:#0066b3;background:#e3f2fd}
@@ -80,6 +76,7 @@
         .segment-bus-info{background:#f9f9f9;border-radius:8px;padding:8px;border:1px solid #eee}
         .stop-label{font-size:.62rem;text-transform:uppercase;color:#999;font-weight:700}.stop-name-route{font-weight:600;font-size:.8rem;color:#333}
         .stop-code-pill{background:#eee;color:#666;padding:1px 4px;border-radius:3px;font-size:.6rem;font-weight:600}
+        
         .suggestions-list{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ddd;border-top:none;border-radius:0 0 10px 10px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:50;max-height:170px;overflow-y:auto;display:none}
         .suggestion-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:.82rem;color:#333}.suggestion-item:hover{background:#f9f9f9;color:#dc0530}
         .toggle-container{display:flex;align-items:center;gap:6px;cursor:pointer}
@@ -90,7 +87,7 @@
         .toast-title{font-weight:700;font-size:.8rem;color:#333}.toast-msg{font-size:.7rem;color:#999;margin-top:1px}
         .lines-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
         .line-grid-item{background:#fafafa;border:1px solid #eee;border-radius:8px;padding:10px 5px;text-align:center;cursor:pointer;transition:all .2s}.line-grid-item:hover{border-color:#dc0530;transform:translateY(-1px)}
-        .line-grid-item .line-num{font-weight:800;font-size:.95rem;color:#dc0530}.line-grid-item .line-num.amb{color:#ffc107}.line-grid-item .line-num.amb-m{color:#0081c2}.line-grid-item .line-num.amb-e{color:#e3001b}
+        .line-grid-item .line-num{font-weight:800;font-size:.95rem;color:#dc0530}.line-grid-item .line-num.green{color:#00a651}.line-grid-item .line-num.blue{color:#003888}.line-grid-item .line-num.purple{color:#8e44ad}
         .line-grid-item .line-label{font-size:.58rem;color:#999;margin-top:1px}
         .stop-suggestions{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ddd;border-top:none;border-radius:0 0 10px 10px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:50;max-height:200px;overflow-y:auto;display:none}
         .stop-suggestion-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0}.stop-suggestion-item:hover{background:rgba(220,5,48,.04)}
@@ -116,9 +113,6 @@
         .intersect-box{background:linear-gradient(135deg,#f8f9fa,#fff);border:1px solid #e8e8e8;border-radius:10px;padding:10px 12px;margin-bottom:10px}
         .intersect-title{font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
         .intersect-lines{display:flex;flex-wrap:wrap;gap:6px}
-        .prov-badge{font-size: 0.55rem; padding: 1px 4px; border-radius: 4px; margin-left: 4px; font-weight: 800;}
-        .prov-tmb{background: #e2241a; color: white;}
-        .prov-amb{background: #ffde00; color: black;}
     </style>
 </head>
 <body>
@@ -126,15 +120,20 @@
     <div class="header-bar">
         <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-                <div class="flex">
-                    <div class="w-6 h-7 gradient-red rounded-l-lg flex items-center justify-center flex-shrink-0 border-r border-red-700"><span class="text-white font-bold" style="font-size:8px">TMB</span></div>
-                    <div class="w-6 h-7 gradient-amb rounded-r-lg flex items-center justify-center flex-shrink-0"><span class="text-black font-bold" style="font-size:8px">AMB</span></div>
+                <div class="w-8 h-8 gradient-red rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm border border-red-700">
+                    <span class="text-white font-bold" style="font-size:10px">TMB</span>
                 </div>
-                <h1 class="text-sm font-bold text-gray-800">TMB & AMB BCN</h1>
+                <h1 class="text-sm font-bold text-gray-800">TMB Barcelona</h1>
             </div>
             <div class="flex items-center gap-3">
-                <div class="toggle-container" onclick="toggleAR()"><div class="toggle-switch active" id="arToggle"></div><span style="font-size:.65rem;color:#999">Auto</span></div>
-                <div class="flex items-center gap-1"><div class="refresh-dot" id="rDot"></div><span id="clock" style="font-size:.75rem;font-weight:700;color:#333"></span></div>
+                <div class="toggle-container" onclick="toggleAR()">
+                    <div class="toggle-switch active" id="arToggle"></div>
+                    <span style="font-size:.65rem;color:#999">Auto</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <div class="refresh-dot" id="rDot"></div>
+                    <span id="clock" style="font-size:.75rem;font-weight:700;color:#333"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -151,7 +150,6 @@
     <div class="main-split">
         <div class="panel-left" id="panelLeft">
             
-            <!-- TAB CERCA -->
             <div id="contentCerca" class="content-padding">
                 <div class="flex gap-2 mb-3">
                     <div class="flex-1 relative">
@@ -160,7 +158,10 @@
                     </div>
                     <button onclick="cSug();doSearch()" class="btn-primary" style="padding:10px 14px">🔍</button>
                 </div>
-                <div id="qFav" class="mb-3 hidden"><p class="text-gray-400 text-xs mb-1">⭐</p><div id="favBtns" class="flex flex-wrap gap-1"></div></div>
+                <div id="qFav" class="mb-3 hidden">
+                    <p class="text-gray-400 text-xs mb-1">⭐</p>
+                    <div id="favBtns" class="flex flex-wrap gap-1"></div>
+                </div>
                 <div id="sInfo" class="hidden mb-3 card-bus p-3 rounded-xl fade-in">
                     <div class="flex items-center justify-between gap-2">
                         <div class="min-w-0 flex-1">
@@ -179,49 +180,83 @@
                     <div id="intersectLines" class="intersect-lines"></div>
                 </div>
                 <div id="results" class="space-y-2 mt-3"></div>
-                <div id="conns" class="hidden mt-3 card-bus p-3 rounded-xl"><h3 class="font-bold text-gray-700 mb-2 text-xs">🚇 Metro</h3><div id="connList" class="flex flex-wrap gap-1"></div></div>
-                <div id="loading" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
-                <div id="errBox" class="hidden card-bus p-3 text-center rounded-xl"><p id="errTxt" class="text-gray-600 text-xs"></p></div>
+                <div id="conns" class="hidden mt-3 card-bus p-3 rounded-xl">
+                    <h3 class="font-bold text-gray-700 mb-2 text-xs">🚇 Metro</h3>
+                    <div id="connList" class="flex flex-wrap gap-1"></div>
+                </div>
+                <div id="loading" class="hidden py-8 flex flex-col items-center">
+                    <div class="loading-spinner"></div>
+                </div>
+                <div id="errBox" class="hidden card-bus p-3 text-center rounded-xl">
+                    <p id="errTxt" class="text-gray-600 text-xs"></p>
+                </div>
             </div>
             
-            <!-- TAB LINEE -->
             <div id="contentLinee" class="content-padding hidden">
-                <div class="mb-3"><input type="text" id="lnSearch" placeholder="Filtra linee TMB o AMB..." class="input-modern" oninput="fltLn()"></div>
-                <div id="lnLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
+                <div class="mb-3">
+                    <input type="text" id="lnSearch" placeholder="Filtra linee TMB..." class="input-modern" oninput="fltLn()">
+                </div>
+                <div id="lnLoad" class="hidden py-8 flex flex-col items-center">
+                    <div class="loading-spinner"></div>
+                </div>
                 <div id="lnContent"></div>
             </div>
             
-            <!-- TAB PERCORSO -->
             <div id="contentPercorso" class="content-padding hidden">
                 <div class="space-y-3 mb-3">
-                    <div class="relative"><label class="block text-xs text-gray-400 mb-1 font-semibold">DA</label><div class="relative"><input type="text" id="rFrom" placeholder="Indirizzo o fermata..." class="input-modern pr-8" oninput="hAI(this,'fL')" autocomplete="off"><button onclick="useML()" class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-1">📍</button></div><div id="fL" class="suggestions-list"></div></div>
-                    <div class="relative"><label class="block text-xs text-gray-400 mb-1 font-semibold">A</label><input type="text" id="rTo" placeholder="Destinazione..." class="input-modern" oninput="hAI(this,'tL')" autocomplete="off"><div id="tL" class="suggestions-list"></div></div>
+                    <div class="relative">
+                        <label class="block text-xs text-gray-400 mb-1 font-semibold">DA</label>
+                        <div class="relative">
+                            <input type="text" id="rFrom" placeholder="Indirizzo o fermata..." class="input-modern pr-8" oninput="hAI(this,'fL')" autocomplete="off">
+                            <button onclick="useML()" class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-1">📍</button>
+                        </div>
+                        <div id="fL" class="suggestions-list"></div>
+                    </div>
+                    <div class="relative">
+                        <label class="block text-xs text-gray-400 mb-1 font-semibold">A</label>
+                        <input type="text" id="rTo" placeholder="Destinazione..." class="input-modern" oninput="hAI(this,'tL')" autocomplete="off">
+                        <div id="tL" class="suggestions-list"></div>
+                    </div>
                     <button onclick="calcRoute()" class="btn-primary w-full">🗺️ Calcola</button>
                 </div>
-                <div id="rLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
+                <div id="rLoad" class="hidden py-8 flex flex-col items-center">
+                    <div class="loading-spinner"></div>
+                </div>
                 <div id="rRes" class="space-y-3"></div>
             </div>
             
-            <!-- TAB VICINANZE -->
             <div id="contentVicinanze" class="content-padding hidden">
                 <button onclick="geoLoc()" class="btn-secondary w-full mb-3">📍 Trova Fermate Vicine</button>
-                <div id="gLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
-                <div id="gErr" class="hidden card-bus p-3 text-center rounded-xl"><p id="gErrTxt" class="text-gray-600 text-xs"></p></div>
+                <div id="gLoad" class="hidden py-8 flex flex-col items-center">
+                    <div class="loading-spinner"></div>
+                </div>
+                <div id="gErr" class="hidden card-bus p-3 text-center rounded-xl">
+                    <p id="gErrTxt" class="text-gray-600 text-xs"></p>
+                </div>
                 <div id="nbList"></div>
-                <div id="nbInit" class="text-center py-8"><div class="text-3xl mb-2">📍</div><p class="text-gray-400 text-xs">Trova le fermate vicine</p></div>
+                <div id="nbInit" class="text-center py-8">
+                    <div class="text-3xl mb-2">📍</div>
+                    <p class="text-gray-400 text-xs">Trova le fermate vicine</p>
+                </div>
             </div>
             
-            <!-- TAB PREFERITI -->
             <div id="contentPreferiti" class="content-padding hidden">
-                <div class="mb-3"><input type="text" id="sStops" placeholder="Cerca fermata..." class="input-modern" oninput="fltSt()"></div>
-                <div class="mb-4"><h3 class="font-bold text-gray-700 mb-2 text-xs">★ Preferite</h3><div id="favList" class="card-bus rounded-xl max-h-32 overflow-y-auto scrollbar-custom"></div></div>
-                <div><h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte (TMB & AMB)</h3><div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div></div>
+                <div class="mb-3">
+                    <input type="text" id="sStops" placeholder="Cerca fermata..." class="input-modern" oninput="fltSt()">
+                </div>
+                <div class="mb-4">
+                    <h3 class="font-bold text-gray-700 mb-2 text-xs">★ Preferite</h3>
+                    <div id="favList" class="card-bus rounded-xl max-h-32 overflow-y-auto scrollbar-custom"></div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte</h3>
+                    <div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div>
+                </div>
             </div>
 
-            <!-- TAB AVVISI -->
             <div id="contentAvvisi" class="content-padding hidden fade-in">
                 <div class="mb-3">
-                    <h3 class="font-bold text-gray-800 text-sm mb-1">Stato del Servizio TMB & AMB</h3>
+                    <h3 class="font-bold text-gray-800 text-sm mb-1">Stato del Servizio TMB</h3>
                     <p class="text-xs text-gray-500">Avvisi in tempo reale su interruzioni, deviazioni e allerte per bus e metro.</p>
                 </div>
                 
@@ -244,11 +279,20 @@
             </div>
             
         </div>
+        
         <div class="panel-right">
             <div id="map"></div>
-            <button onclick="centerMe()" class="location-btn" id="locBtn"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg></button>
+            <button onclick="centerMe()" class="location-btn" id="locBtn">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+            </button>
             <div class="map-stop-popup" id="mPop">
-                <div class="flex items-center justify-between gap-2"><div class="min-w-0 flex-1"><h3 id="popN" class="font-bold text-sm text-gray-800 truncate"></h3><p id="popC" class="text-gray-400 text-xs"></p></div><button onclick="viewPop()" class="btn-primary" style="padding:5px 10px;font-size:.7rem">VEDI</button></div>
+                <div class="flex items-center justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                        <h3 id="popN" class="font-bold text-sm text-gray-800 truncate"></h3>
+                        <p id="popC" class="text-gray-400 text-xs"></p>
+                    </div>
+                    <button onclick="viewPop()" class="btn-primary" style="padding:5px 10px;font-size:.7rem">VEDI</button>
+                </div>
                 <div id="popB" class="mt-2 space-y-1"></div>
             </div>
         </div>
@@ -258,9 +302,7 @@
 
 <script>
 const AID='a5d88368',AKEY='4a578607c30c461a8fd7729700711337',BU='https://api.tmb.cat/v1';
-const AMB_BU='https://api.ambmobilitat.cat/v1';
 
-// Helper per far competere più richieste e prendere solo la prima vincente
 function raceSuccess(promises) {
     return new Promise((resolve, reject) => {
         let errors = [];
@@ -276,8 +318,8 @@ function raceSuccess(promises) {
     });
 }
 
-// MOTORE DI RETE: Parallelizzazione Estrema e Hard-Timeout per evitare blocchi
-async function F(url, ttl = 0, isAMB = false) {
+// Motore di rete parallelo estremamente veloce (Solo TMB)
+async function F(url, ttl = 0) {
     if (ttl > 0) {
         const cached = localStorage.getItem('tmbf_' + url); 
         if (cached) {
@@ -289,7 +331,7 @@ async function F(url, ttl = 0, isAMB = false) {
     }
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500); // MAX 4.5 SECONDI
+    const timeoutId = setTimeout(() => controller.abort(), 5000); 
 
     const p1 = fetch(url, { signal: controller.signal }).then(r => {
         if(!r.ok) throw new Error();
@@ -318,7 +360,6 @@ async function F(url, ttl = 0, isAMB = false) {
         return res;
     } catch(e) {
         clearTimeout(timeoutId);
-        if (isAMB) return null; // Se cade AMB, semplicemente lo ignora
         throw new Error('Network error');
     }
 }
@@ -350,10 +391,6 @@ function gLC(l){
     if(u.startsWith('H'))return'line-h';
     if(u.startsWith('D'))return'line-d';
     if(u.startsWith('X'))return'line-x';
-    if(u.startsWith('M'))return'line-amb-m'; 
-    if(u.startsWith('E'))return'line-amb-e';
-    if(u.startsWith('N'))return'line-amb-n';
-    if(u.match(/^[LBCJ]/))return'line-amb';
     return'line-normal';
 }
 
@@ -362,9 +399,6 @@ function gLCC(n){
     if(u.startsWith('V'))return'green';
     if(u.startsWith('H'))return'blue';
     if(u.startsWith('D'))return'purple';
-    if(u.startsWith('M'))return'amb-m';
-    if(u.startsWith('E'))return'amb-e';
-    if(u.match(/^[LBCJN]/))return'amb';
     return'';
 }
 
@@ -372,7 +406,7 @@ function fA(m){if(m<=0)return'<span class="time-display time-green">⚡</span>';
 function toggleAR(){arOn=!arOn;document.getElementById('arToggle').classList.toggle('active',arOn);document.getElementById('rDot').classList.toggle('paused',!arOn);if(arOn)startAR();else stopAR()}
 
 let ssT;
-function hSS(){clearTimeout(ssT);const q=document.getElementById('stopCode').value.trim();if(q.length<2){cSug();return}ssT=setTimeout(()=>{if(!allS.length)return;const s=q.toLowerCase(),m=allS.filter(x=>x.code.toString().startsWith(s)||x.name.toLowerCase().includes(s)).slice(0,8);const c=document.getElementById('sSug');if(!m.length){c.style.display='none';return}c.innerHTML=m.map(x=>`<div class="stop-suggestion-item" onclick="document.getElementById('stopCode').value='${x.code}';cSug();doSearch()"><div class="stop-sugg-name">🚏 ${x.name} <span class="prov-badge ${x.provider==='TMB'?'prov-tmb':'prov-amb'}">${x.provider}</span></div><div class="stop-sugg-code">#${x.code}</div></div>`).join('');c.style.display='block'},200)}
+function hSS(){clearTimeout(ssT);const q=document.getElementById('stopCode').value.trim();if(q.length<2){cSug();return}ssT=setTimeout(()=>{if(!allS.length)return;const s=q.toLowerCase(),m=allS.filter(x=>x.code.toString().startsWith(s)||x.name.toLowerCase().includes(s)).slice(0,8);const c=document.getElementById('sSug');if(!m.length){c.style.display='none';return}c.innerHTML=m.map(x=>`<div class="stop-suggestion-item" onclick="document.getElementById('stopCode').value='${x.code}';cSug();doSearch()"><div class="stop-sugg-name">🚏 ${x.name}</div><div class="stop-sugg-code">#${x.code}</div></div>`).join('');c.style.display='block'},200)}
 function cSug(){document.getElementById('sSug').style.display='none'}
 
 function clearMap(){mkrs.forEach(m=>map.removeLayer(m));mkrs=[];if(selMkr){map.removeLayer(selMkr);selMkr=null}}
@@ -381,7 +415,7 @@ function hlOnMap(code){
     if(selMkr){map.removeLayer(selMkr);selMkr=null}
     const s=allS.find(x=>x.code==code);
     if(!s||!s.lat||!s.lon)return;
-    const yI=L.divIcon({className:'',html:`<div style="width:20px;height:20px;background:${s.provider==='AMB'?'#ffde00':'#ffc107'};border:3px solid ${s.provider==='AMB'?'black':'white'};border-radius:50%;box-shadow:0 0 12px rgba(255,193,7,.6),0 2px 8px rgba(0,0,0,.3);z-index:9000"></div>`,iconSize:[20,20],iconAnchor:[10,10]});
+    const yI=L.divIcon({className:'',html:`<div style="width:20px;height:20px;background:#ffc107;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(255,193,7,.6),0 2px 8px rgba(0,0,0,.3);z-index:9000"></div>`,iconSize:[20,20],iconAnchor:[10,10]});
     selMkr=L.marker([s.lat,s.lon],{icon:yI,zIndexOffset:9000}).addTo(map);
     selMkr.bindTooltip(`<strong>📍 ${s.name}</strong><br>#${s.code}`,{direction:'top',offset:[0,-12]});
     map.setView([s.lat,s.lon],17,{animate:true})
@@ -428,42 +462,24 @@ function openLine(lineCode, lineName){
     setTimeout(()=>loadLS(lineCode,lineName),100);
 }
 
-// Chiamate AMB Real-time sicure
-async function fetchAMBRealTime(code) {
-    try {
-        const res = await F(`${AMB_BU}/estimacions/${code}`, 0, true);
-        if(res && (Array.isArray(res) || res.estimacions || res.data)) return res;
-    } catch(e) {}
-    try {
-        const res2 = await F(`${AMB_BU}/timebus/${code}`, 0, true);
-        if(res2 && (Array.isArray(res2) || res2.estimacions || res2.data)) return res2;
-    } catch(e) {}
-    return null;
-}
-
 async function doSearch(sil=false){
     let code=document.getElementById('stopCode').value.trim();
     if(sil&&lastC)code=lastC;if(!code)return;
     
-    let isAMBOnly = false;
     let sMatch = allS.find(x=>x.code==code || x.name.toLowerCase()===code.toLowerCase());
     if(!/^\d+$/.test(code)&&!sil){
         if(sMatch){code=sMatch.code;document.getElementById('stopCode').value=code}
         else{document.getElementById('errTxt').textContent='Non trovata.';document.getElementById('errBox').classList.remove('hidden');return}
     }
-    if(sMatch && sMatch.provider === 'AMB') isAMBOnly = true;
 
     lastC=code;if(arOn)startAR();
     if(!sil){document.getElementById('loading').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('errBox').classList.add('hidden');document.getElementById('sInfo').classList.add('hidden');document.getElementById('conns').classList.add('hidden');document.getElementById('intersectBox').classList.add('hidden'); clearMap();} 
     
     try{
-        const promises = [
+        const [sd, dataTMB] = await Promise.all([
             sil ? Promise.resolve(null) : F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000).catch(()=>null),
-            isAMBOnly ? Promise.resolve(null) : F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`).catch(()=>null),
-            fetchAMBRealTime(code).catch(()=>null)
-        ];
-        
-        const [sd, dataTMB, dataAMB] = await Promise.all(promises);
+            F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`).catch(()=>null)
+        ]);
         
         if(!sil){
             if(sd && sd.features?.length){
@@ -488,29 +504,17 @@ async function doSearch(sil=false){
         let buses = [];
         
         if(dataTMB && dataTMB.data?.ibus?.length){
-            buses = [...buses, ...dataTMB.data.ibus.map(x=>({...x, provider: 'TMB'}))];
-        }
-        
-        if(dataAMB) {
-            let ambArr = Array.isArray(dataAMB) ? dataAMB : (dataAMB.estimacions || dataAMB.data || []);
-            let ambFormatted = ambArr.map(e => ({
-                line: e.linia || e.idLinia || 'AMB',
-                destination: e.desti || e.destinazione || e.nomDesti || '',
-                't-in-min': e.tempsInMin || e.minuts || e.tempsMinuts || (e.tempsSegons?Math.round(e.tempsSegons/60):0),
-                provider: 'AMB',
-                'text-ca': e.text || ''
-            }));
-            buses = [...buses, ...ambFormatted];
+            buses = dataTMB.data.ibus;
         }
         
         buses = buses.filter(x=>!x.line.toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']);
         
         if(!buses.length){
-            document.getElementById('errTxt').textContent='Nessun bus diurno in arrivo.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';return
+            document.getElementById('errTxt').textContent='Nessun bus diurno in arrivo.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';return;
         }
         
         document.getElementById('errBox').classList.add('hidden');
-        document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-3 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x.provider} ${x['text-ca']?'- '+x['text-ca']:''}</p></div></div><div class="flex-shrink-0 text-right">${fA(x['t-in-min'])}</div></div></div>`).join('');
+        document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-3 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x['text-ca']?x['text-ca']:''}</p></div></div><div class="flex-shrink-0 text-right">${fA(x['t-in-min'])}</div></div></div>`).join('');
 
         if(!sil){
             const allLineNames=[...new Set(buses.map(b=>b.line))];
@@ -538,9 +542,9 @@ function rQF(){const c=document.getElementById('favBtns'),w=document.getElementB
 function rFL(){const c=document.getElementById('favList');if(!fav.length){c.innerHTML='<p class="p-3 text-gray-400 text-center text-xs">—</p>';return}c.innerHTML=fav.map(f=>`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${f.code}')"><span class="font-bold text-red-600 text-xs">${f.code}</span> <span class="text-gray-600 text-xs">${f.name}</span></div><button onclick="fav=fav.filter(x=>x.code!=='${f.code}');localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rQF()" class="text-gray-300 hover:text-red-500 text-sm px-1">✕</button></div>`).join('')}
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
-// AGGIORNATA LA CHIAVE DELLA CACHE ALLA v10 PER PULIRE TELEFONO
+// RESET CHIAVE CACHE PER RIMUOVERE RESIDUI AMB
 async function loadAllS(){
-    const lsKey = 'tmbf_all_stops_v10_amb';
+    const lsKey = 'tmbf_all_stops_tmb_only_v1';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -552,47 +556,19 @@ async function loadAllS(){
         } catch(e){}
     }
     try {
-        const [d_tmb, d_amb] = await Promise.allSettled([
-            F(`${BU}/transit/parades?app_id=${AID}&app_key=${AKEY}`),
-            F(`${AMB_BU}/parades`, 0, true) 
-        ]);
-        
-        let tmbStops = [], ambStops = [];
-        if (d_tmb.status === 'fulfilled' && d_tmb.value?.features) {
-            tmbStops = d_tmb.value.features.map(f=>({
+        const d_tmb = await F(`${BU}/transit/parades?app_id=${AID}&app_key=${AKEY}`);
+        let tmbStops = [];
+        if (d_tmb?.features) {
+            tmbStops = d_tmb.features.map(f=>({
                 code:String(f.properties.CODI_PARADA||f.properties.CODI),
                 name:f.properties.NOM_PARADA||f.properties.NOM||'Fermata TMB',
                 lat:f.geometry.coordinates[1],
-                lon:f.geometry.coordinates[0], 
-                provider:'TMB'
+                lon:f.geometry.coordinates[0]
             })).filter(s=>s.code);
         }
-        if (d_amb.status === 'fulfilled') {
-            const arr = Array.isArray(d_amb.value) ? d_amb.value : (d_amb.value?.features || d_amb.value?.parades || []);
-            ambStops = arr.map(f=>{
-                let p = f.properties || f;
-                return {
-                    code:String(p.codiParada||p.codi||p.id), 
-                    name:p.nomParada||p.nom||'Fermata AMB', 
-                    lat:f.geometry?f.geometry.coordinates[1]:(p.lat||p.latitud), 
-                    lon:f.geometry?f.geometry.coordinates[0]:(p.lon||p.longitud), 
-                    provider:'AMB'
-                }
-            }).filter(s=>s.code && s.code !== 'undefined');
-        }
         
-        const merged = [...tmbStops, ...ambStops];
-        const unique = []; const map = new Map();
-        for (const item of merged) {
-            if(!item.code) continue;
-            if(!map.has(item.code)){
-                map.set(item.code, true); unique.push(item);
-            }
-        }
-        
-        allS = unique.sort((a,b)=>natS(a.code,b.code));
+        allS = tmbStops.sort((a,b)=>natS(a.code,b.code));
         if(allS.length) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allS})); } catch(e){}
-        
     } catch(e) {}
 }
 
@@ -601,7 +577,7 @@ async function loadLn(){
     document.getElementById('lnLoad').classList.remove('hidden');
     document.getElementById('lnContent').innerHTML='';
     
-    const lsKey = 'tmbf_all_lines_v10_amb';
+    const lsKey = 'tmbf_all_lines_tmb_only_v1';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -617,31 +593,22 @@ async function loadLn(){
     }
     
     try{
-        const [d_tmb, d_amb] = await Promise.allSettled([
-            F(`${BU}/transit/linies/bus?app_id=${AID}&app_key=${AKEY}`),
-            F(`${AMB_BU}/linies`, 0, true) 
-        ]);
-        
-        let tmbLns = [], ambLns = [];
-        if(d_tmb.status === 'fulfilled') {
-            let res = d_tmb.value?.features || (Array.isArray(d_tmb.value)?d_tmb.value:[]);
-            tmbLns = res.map(x=>{const p=x.properties||x;return{code:String(p.CODI_LINIA||''),name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||'',provider:'TMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
-        }
-        if(d_amb.status === 'fulfilled') {
-            let res = Array.isArray(d_amb.value) ? d_amb.value : (d_amb.value?.features || d_amb.value?.linies || []);
-            ambLns = res.map(x=>{const p=x.properties||x;return{code:String(p.codiLinia||p.idLinia||p.id||p.codi||''),name:p.nomLinia||p.idLinia||p.nom||p.id||'?',desc:p.descripcio||p.nom||'',origin:p.origen||'',dest:p.desti||'',provider:'AMB'}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+        const d_tmb = await F(`${BU}/transit/linies/bus?app_id=${AID}&app_key=${AKEY}`);
+        let tmbLns = [];
+        if(d_tmb) {
+            let res = d_tmb?.features || (Array.isArray(d_tmb)?d_tmb:[]);
+            tmbLns = res.map(x=>{const p=x.properties||x;return{code:String(p.CODI_LINIA||''),name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||''}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
         }
         
-        allLn = [...tmbLns, ...ambLns].filter(l => l.name && l.name !== '?').sort((a,b)=>natS(a.name,b.name));
+        allLn = tmbLns.filter(l => l.name && l.name !== '?').sort((a,b)=>natS(a.name,b.name));
         if(allLn.length) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allLn})); } catch(e){}
         lnLoaded=true; renderLn();
     }catch(e){
-        document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore API</div><div class="error-detail">Si è verificato un errore nel caricamento. Riprova.</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
+        document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore Server</div><div class="error-detail">Si è verificato un errore nel caricamento. Riprova.</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
     }
     document.getElementById('lnLoad').classList.add('hidden');
 }
 
-// LOGICA RAGGRUPPAMENTO DINAMICO
 function renderLn(flt=''){
     const c=document.getElementById('lnContent');
     let fl=allLn;
@@ -677,18 +644,12 @@ async function loadLS(lc,ln){
     clName=ln;clCode=lc;aDir='a';
     const c=document.getElementById('lnContent');
     c.innerHTML='<div class="py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>';
-    const lineMeta = allLn.find(l => l.code == lc) || {origin: '', dest: '', provider: 'TMB'};
+    const lineMeta = allLn.find(l => l.code == lc) || {origin: '', dest: ''};
 
     try{
         let d, f = [];
-        if(lineMeta.provider === 'AMB') {
-            d = await F(`${AMB_BU}/linies/${lc}/parades`, 1800000, true).catch(()=>null);
-            if (!d) d = await F(`${AMB_BU}/parades/linia/${lc}`, 1800000, true).catch(()=>null);
-            f = d ? (Array.isArray(d) ? d : (d.features || d.parades || [])) : [];
-        } else {
-            d = await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 1800000); 
-            f = d?.features||(Array.isArray(d)?d:null) || [];
-        }
+        d = await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 1800000); 
+        f = d?.features||(Array.isArray(d)?d:null) || [];
         
         if(!f?.length)throw new Error('Nessuna fermata trovata per questa linea.');
         
@@ -782,7 +743,7 @@ function addLnMkrs(stops){
     if(bounds.isValid())map.fitBounds(bounds,{padding:[40,40]})
 }
 
-function rAS(){const c=document.getElementById('allList');const s=document.getElementById('sStops').value.toLowerCase();let f=allS;if(s)f=allS.filter(x=>x.code.toString().includes(s)||x.name.toLowerCase().includes(s));c.innerHTML=f.slice(0,60).map(x=>{const iF=fav.some(ff=>ff.code==x.code);return`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${x.code}')"><span class="font-bold text-red-600 text-xs">${x.code}</span> <span class="text-gray-600 text-xs">${x.name} <span class="prov-badge ${x.provider==='TMB'?'prov-tmb':'prov-amb'}">${x.provider}</span></span></div><button onclick="const i=fav.findIndex(f=>f.code=='${x.code}');if(i>-1)fav.splice(i,1);else fav.push({code:'${x.code}',name:'${x.name.replace(/'/g,"\\'")}'});localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rAS();rQF()" class="star-btn text-sm ${iF?'active':''}">${iF?'★':'☆'}</button></div>`}).join('')+(f.length>60?'<p class="p-2 text-center text-gray-300 text-xs">60/'+f.length+'</p>':'')}
+function rAS(){const c=document.getElementById('allList');const s=document.getElementById('sStops').value.toLowerCase();let f=allS;if(s)f=allS.filter(x=>x.code.toString().includes(s)||x.name.toLowerCase().includes(s));c.innerHTML=f.slice(0,60).map(x=>{const iF=fav.some(ff=>ff.code==x.code);return`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${x.code}')"><span class="font-bold text-red-600 text-xs">${x.code}</span> <span class="text-gray-600 text-xs">${x.name}</span></div><button onclick="const i=fav.findIndex(f=>f.code=='${x.code}');if(i>-1)fav.splice(i,1);else fav.push({code:'${x.code}',name:'${x.name.replace(/'/g,"\\'")}'});localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rAS();rQF()" class="star-btn text-sm ${iF?'active':''}">${iF?'★':'☆'}</button></div>`}).join('')+(f.length>60?'<p class="p-2 text-center text-gray-300 text-xs">60/'+f.length+'</p>':'')}
 function fltSt(){rAS()}
 
 function geoLoc(){document.getElementById('nbInit').classList.add('hidden');document.getElementById('gErr').classList.add('hidden');document.getElementById('nbList').innerHTML='';document.getElementById('gLoad').classList.remove('hidden');navigator.geolocation.getCurrentPosition(p=>{uLoc={lat:p.coords.latitude,lon:p.coords.longitude};document.getElementById('gLoad').classList.add('hidden');showNb()},()=>{navigator.geolocation.getCurrentPosition(p=>{uLoc={lat:p.coords.latitude,lon:p.coords.longitude};document.getElementById('gLoad').classList.add('hidden');showNb()},e=>{document.getElementById('gLoad').classList.add('hidden');document.getElementById('gErrTxt').textContent='Posizione non disponibile';document.getElementById('gErr').classList.remove('hidden')},{enableHighAccuracy:true,timeout:20000})},{enableHighAccuracy:false,timeout:15000,maximumAge:300000})}
@@ -790,7 +751,7 @@ function cDist(a,b,c,d){const R=6371000,dL=(c-a)*Math.PI/180,dN=(d-b)*Math.PI/18
 function fD(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km'}
 async function showNb(){if(!uLoc||!allS.length)return;
     clearMap(); 
-    const sorted=allS.filter(s=>s.lat&&s.lon).map(s=>({...s,dist:cDist(uLoc.lat,uLoc.lon,s.lat,s.lon)})).sort((a,b)=>a.dist-b.dist).slice(0,12);document.getElementById('nbList').innerHTML=sorted.map((s,i)=>`<div class="nearby-stop fade-in" style="animation-delay:${i*.04}s" onclick="selSt('${s.code}')"><div class="flex items-center justify-between mb-1"><div class="flex items-center gap-2"><span class="font-bold text-red-600 text-xs">${s.code}</span><span class="distance-badge">${fD(s.dist)}</span><span class="prov-badge ${s.provider==='TMB'?'prov-tmb':'prov-amb'}">${s.provider}</span></div></div><p class="text-gray-700 text-xs truncate mb-1">${s.name}</p><div id="nb-${s.code}" class="text-xs text-gray-300">...</div></div>`).join('');tst('Trovate',sorted.length);sorted.slice(0,6).forEach(s=>lNbA(s.code, s.provider));
+    const sorted=allS.filter(s=>s.lat&&s.lon).map(s=>({...s,dist:cDist(uLoc.lat,uLoc.lon,s.lat,s.lon)})).sort((a,b)=>a.dist-b.dist).slice(0,12);document.getElementById('nbList').innerHTML=sorted.map((s,i)=>`<div class="nearby-stop fade-in" style="animation-delay:${i*.04}s" onclick="selSt('${s.code}')"><div class="flex items-center justify-between mb-1"><div class="flex items-center gap-2"><span class="font-bold text-red-600 text-xs">${s.code}</span><span class="distance-badge">${fD(s.dist)}</span></div></div><p class="text-gray-700 text-xs truncate mb-1">${s.name}</p><div id="nb-${s.code}" class="text-xs text-gray-300">...</div></div>`).join('');tst('Trovate',sorted.length);sorted.slice(0,6).forEach(s=>lNbA(s.code));
     const ic=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#0066b3;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
     const bounds = L.latLngBounds();
     sorted.forEach(s=>{
@@ -802,18 +763,10 @@ async function showNb(){if(!uLoc||!allS.length)return;
     if(uLoc) bounds.extend([uLoc.lat, uLoc.lon]);
     if(bounds.isValid()) map.fitBounds(bounds, {padding:[50,50]});
 }
-async function lNbA(code, provider){const c=document.getElementById('nb-'+code);if(!c)return;try{
+async function lNbA(code){const c=document.getElementById('nb-'+code);if(!c)return;try{
+    const d = await F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`);
     let b = [];
-    if(provider==='AMB'){
-        const da = await fetchAMBRealTime(code).catch(()=>null);
-        if(da) {
-             let arr = Array.isArray(da) ? da : (da.estimacions || da.data || []);
-             b = arr.map(e => ({line: e.linia||e.idLinia, 't-in-min': e.tempsInMin||e.minuts||(e.tempsSegons?Math.round(e.tempsSegons/60):0)}));
-        }
-    } else {
-        const d = await F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`);
-        if(d.data?.ibus?.length) b = d.data.ibus;
-    }
+    if(d.data?.ibus?.length) b = d.data.ibus;
     if(b.length){const t=b.filter(b=>!(b.line||'').toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']).slice(0,3);c.innerHTML=t.length?t.map(b=>`<span class="bus-badge-sm ${gLC(b.line)}" style="cursor:default;font-size:.6rem;padding:2px 4px;min-width:24px;margin-right:1px">${b.line}</span><span class="text-xs ${b['t-in-min']<=2?'text-green-500':'text-red-500'} mr-2">${b['t-in-min']<=0?'⚡':b['t-in-min']+"'"}</span>`).join(''):'—'}else c.innerHTML='—'}catch(e){c.innerHTML='—'}}
 
 function initMap(){map=L.map('map',{zoomControl:true}).setView([41.3851,2.1734],13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'©OSM'}).addTo(map)}
@@ -821,17 +774,9 @@ function centerMe(){navigator.geolocation.getCurrentPosition(p=>{uLoc={lat:p.coo
 
 let popS=null;
 async function mapClick(s){popS=s;document.getElementById('popN').textContent=s.name;document.getElementById('popC').textContent='#'+s.code;document.getElementById('mPop').classList.add('show');hlOnMap(s.code);try{
+    const d=await F(`${BU}/ibus/stops/${s.code}?app_id=${AID}&app_key=${AKEY}`);
     let b = [];
-    if(s.provider === 'AMB') {
-         const da = await fetchAMBRealTime(s.code).catch(()=>null);
-         if(da) {
-             let arr = Array.isArray(da) ? da : (da.estimacions || da.data || []);
-             b = arr.map(e => ({line: e.linia||e.idLinia, destination: e.desti||'', 't-in-min': e.tempsInMin||e.minuts||(e.tempsSegons?Math.round(e.tempsSegons/60):0)}));
-         }
-    } else {
-        const d=await F(`${BU}/ibus/stops/${s.code}?app_id=${AID}&app_key=${AKEY}`);
-        if(d.data?.ibus?.length) b = d.data.ibus;
-    }
+    if(d.data?.ibus?.length) b = d.data.ibus;
     
     if(b.length){const flt=b.filter(x=>!(x.line||'').toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']).slice(0,4);document.getElementById('popB').innerHTML=flt.map(x=>`<div class="flex items-center justify-between"><div class="flex items-center gap-1"><span class="bus-badge-sm ${gLC(x.line)}" style="cursor:default;font-size:.65rem;padding:2px 5px;min-width:28px">${x.line}</span><span class="text-xs text-gray-500 truncate" style="max-width:80px">${x.destination||''}</span></div><span class="text-xs font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('')}else document.getElementById('popB').innerHTML='<span class="text-gray-300 text-xs">—</span>'}catch(e){document.getElementById('popB').innerHTML=''}}
 function viewPop(){if(popS){selSt(popS.code);document.getElementById('mPop').classList.remove('show')}}
