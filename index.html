@@ -127,7 +127,8 @@
         #avvisiContainer .c-alert { background: #fef2f2; border-left: 4px solid #dc0530; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
         #avvisiContainer .c-alert--warning { background: #fffbeb; border-left-color: #ffc107; }
         #avvisiContainer .c-alert__title { font-weight: bold; margin-bottom: 5px; }
-        #avvisiContainer [class*="hidden"], #avvisiContainer [style*="display: none"] { display: block !important; } /* Rivela tutto l'SSR */
+        #avvisiContainer .c-button { background: #dc0530; color: white; padding: 6px 12px; border-radius: 4px; display: inline-block; text-decoration: none; font-weight: bold; margin-top: 5px; font-size: 0.8rem; }
+        #avvisiContainer [class*="hidden"], #avvisiContainer [style*="display: none"] { display: block !important; } 
     </style>
 </head>
 <body>
@@ -183,6 +184,7 @@
                     <div class="intersect-title">🔀 Intersezioni — Linee disponibili</div>
                     <div id="intersectLines" class="intersect-lines"></div>
                 </div>
+                <div id="ibusDsp" class="hidden"></div>
                 <div id="results" class="space-y-2 mt-3"></div>
                 <div id="conns" class="hidden mt-3 card-bus p-3 rounded-xl"><h3 class="font-bold text-gray-700 mb-2 text-xs">🚇 Metro</h3><div id="connList" class="flex flex-wrap gap-1"></div></div>
                 <div id="loading" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
@@ -219,7 +221,7 @@
                 <div><h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte</h3><div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div></div>
             </div>
 
-            <!-- TAB AVVISI - CON SCRAPER -->
+            <!-- TAB AVVISI - CON SCRAPER DINAMICO E FALLBACK -->
             <div id="contentAvvisi" class="content-padding hidden fade-in">
                 <div class="mb-3">
                     <h3 class="font-bold text-gray-800 text-sm mb-1">Stato della Rete (Live)</h3>
@@ -232,7 +234,7 @@
                 </div>
                 
                 <div id="avvisiContainer" class="card-bus rounded-xl overflow-y-auto p-4 bg-white" style="height: calc(100vh - 220px);">
-                    <!-- L'HTML formattato comparirà qui -->
+                    <!-- HTML formattato -->
                 </div>
             </div>
             
@@ -267,9 +269,9 @@ function raceSuccess(promises) {
     });
 }
 
-// MOTORE DI RETE: Aggiunto supporto al formato Testo Puro (HTML) per lo scraper.
-async function F(url, ttl = 0, rawText = false) {
-    if (ttl > 0 && !rawText) {
+// RESTAURATA LA FUNZIONE DI RETE ORIGINALE: solo per JSON, velocissima, non si inceppa con l'HTML
+async function F(url, ttl = 0) {
+    if (ttl > 0) {
         const cached = localStorage.getItem('tmbf_' + url); 
         if (cached) {
             try {
@@ -284,27 +286,26 @@ async function F(url, ttl = 0, rawText = false) {
 
     const p1 = fetch(url, { signal: controller.signal }).then(r => {
         if(!r.ok) throw new Error();
-        return rawText ? r.text() : r.json().catch(async () => JSON.parse(await r.text()));
+        return r.json().catch(async () => JSON.parse(await r.text()));
     });
     
     const p2 = fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}&disableCache=true`, { signal: controller.signal })
         .then(r => r.json())
         .then(d => {
             if(!d || !d.contents) throw new Error();
-            if(rawText) return d.contents;
             return typeof d.contents === 'string' ? JSON.parse(d.contents) : d.contents;
         });
         
     const p3 = fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { signal: controller.signal })
         .then(r => {
             if(!r.ok) throw new Error();
-            return rawText ? r.text() : r.json().catch(async () => JSON.parse(await r.text()));
+            return r.json().catch(async () => JSON.parse(await r.text()));
         });
 
     try {
         const res = await raceSuccess([p1, p2, p3]);
         clearTimeout(timeoutId);
-        if (ttl > 0 && res && !res.error && !res.error_message && !rawText) {
+        if (ttl > 0 && res && !res.error && !res.error_message) {
             try { localStorage.setItem('tmbf_' + url, JSON.stringify({t: Date.now(), d: res})); } catch(e){}
         }
         return res;
@@ -313,6 +314,36 @@ async function F(url, ttl = 0, rawText = false) {
         throw new Error('Network error');
     }
 }
+
+// NUOVO MOTORE DI SCRAPING BLINDATO (HTML CRrudo, con bypass Cloudflare)
+async function scrapeTMB(url) {
+    const proxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+    ];
+    
+    for (let p of proxies) {
+        try {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 7000); // 7 secondi max
+            const r = await fetch(p, { signal: controller.signal });
+            clearTimeout(id);
+            
+            if (r.ok) {
+                const html = await r.text();
+                // Verifichiamo che l'HTML sia una pagina vera e non la protezione di Cloudflare
+                if (html.includes('<html') && !html.includes('Just a moment...') && !html.includes('Cloudflare')) {
+                    return html;
+                }
+            }
+        } catch(e) {
+            // Se il proxy cade, prova silenziosamente il prossimo
+        }
+    }
+    throw new Error('Scraping blocked by Cloudflare/CORS');
+}
+
 
 function decPL(s,p){let i=0,la=0,lo=0,c=[],sh,r,b,f=Math.pow(10,p||5);while(i<s.length){b=null;sh=0;r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);la+=((r&1)?~(r>>1):(r>>1));sh=r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);lo+=((r&1)?~(r>>1):(r>>1));c.push([la/f,lo/f])}return c}
 function natS(a,b){const re=/(\d+)/g,ap=a.split(re),bp=b.split(re);for(let i=0;i<Math.max(ap.length,bp.length);i++){const x=ap[i]||'',y=bp[i]||'',xn=parseInt(x),yn=parseInt(y);if(!isNaN(xn)&&!isNaN(yn)){if(xn!==yn)return xn-yn}else{const c=x.localeCompare(y);if(c)return c}}return 0}
@@ -434,7 +465,7 @@ function rFL(){const c=document.getElementById('favList');if(!fav.length){c.inne
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
 async function loadAllS(){
-    const lsKey = 'tmbf_all_stops_tmb_only_v1';
+    const lsKey = 'tmbf_all_stops_tmb_only_v2';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -465,7 +496,7 @@ async function loadLn(){
     document.getElementById('lnLoad').classList.remove('hidden');
     document.getElementById('lnContent').innerHTML='';
     
-    const lsKey = 'tmbf_all_lines_tmb_only_v1';
+    const lsKey = 'tmbf_all_lines_tmb_only_v2';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -771,9 +802,7 @@ function drawRouteOnMap(idx) {
     if(bounds.length)map.fitBounds(bounds,{padding:[40,40]});
 }
 
-// =========================================================================
-// FUNZIONI DI SCRAPING PER IL TAB AVVISI
-// =========================================================================
+// SCRAPING UFFICIALE AVVISI TMB
 async function loadAvvisi(type) {
     document.getElementById('btnAvvisiMetro').classList.toggle('active', type === 'metro');
     document.getElementById('btnAvvisiBus').classList.toggle('active', type === 'bus');
@@ -786,34 +815,43 @@ async function loadAvvisi(type) {
         : 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-bus';
         
     try {
-        // Usa F() chiedendo esplicitamente il testo crudo (rawText = true)
-        const html = await F(url, 0, true); 
+        const html = await scrapeTMB(url); 
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        // Cerca il blocco principale dei contenuti
-        let main = doc.querySelector('.l-main') || doc.querySelector('main') || doc.querySelector('#app') || doc.body;
+        let main = doc.querySelector('.view-estat-de-la-xarxa') 
+                || doc.querySelector('.view-alteracions')
+                || doc.querySelector('#block-tmb-base-content')
+                || doc.querySelector('main') 
+                || doc.body;
         
-        // Rimuovi tutto ciò che potrebbe rompere il design o che è inutile
-        const noise = ['header', 'footer', 'nav', 'script', 'style', 'noscript', 'form', '.cookie-banner', '#onetrust-consent-sdk', '.breadcrumb'];
+        const noise = ['header', 'footer', 'nav', 'script', 'style', 'noscript', 'form', '.cookie-banner', '#onetrust-consent-sdk', '.breadcrumb', '.page-header', '.social-share'];
         noise.forEach(sel => main.querySelectorAll(sel).forEach(el => el.remove()));
         
-        // Correggi i link relativi
         main.querySelectorAll('a').forEach(a => {
             let h = a.getAttribute('href');
             if(h && h.startsWith('/')) a.href = 'https://www.tmb.cat' + h;
             a.target = '_blank';
         });
         
-        // Rimuove blocchi vuoti per evitare spazi morti giganteschi
         main.querySelectorAll('div').forEach(div => {
             if(!div.textContent.trim() && !div.querySelector('img, svg')) div.remove();
         });
 
-        c.innerHTML = main.innerHTML || '<p class="text-center text-gray-500">Nessun avviso trovato.</p>';
+        c.innerHTML = main.innerHTML || '<p class="text-center text-gray-500 mt-4">Nessun avviso trovato al momento.</p>';
         
     } catch(e) {
-        c.innerHTML = `<div class="p-4 text-center text-red-500 font-bold">Errore durante lo scraping.<br><span class="text-xs font-normal">I server TMB stanno bloccando la richiesta, riprova più tardi.</span></div>`;
+        c.innerHTML = `
+            <div class="p-4 text-center mt-4">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 text-red-500 mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h4 class="font-bold text-gray-800 mb-1">Scudo Anti-Bot Rilevato</h4>
+                <p class="text-xs text-gray-500 mb-4">I server TMB (Cloudflare) stanno bloccando temporaneamente le letture anonime.</p>
+                <button onclick="window.open('${url}', '_blank')" class="btn-primary w-full flex items-center justify-center gap-2">
+                    Apri la Pagina Ufficiale TMB
+                </button>
+            </div>`;
     }
 }
 
