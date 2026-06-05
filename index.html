@@ -60,7 +60,6 @@
         .bus-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
         .bus-info{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
         .bus-destination{flex:1;min-width:0}.bus-destination p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        
         .nearby-stop{background:white;border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .2s}.nearby-stop:hover{border-color:#dc0530}
         .distance-badge{background:#e3f2fd;color:#1976d2;padding:3px 8px;border-radius:12px;font-size:.68rem;font-weight:600}
         .location-btn{position:absolute;bottom:14px;right:14px;z-index:1000;width:38px;height:38px;background:white;border:2px solid #ddd;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)}.location-btn:hover{border-color:#0066b3;background:#e3f2fd}
@@ -76,7 +75,6 @@
         .segment-bus-info{background:#f9f9f9;border-radius:8px;padding:8px;border:1px solid #eee}
         .stop-label{font-size:.62rem;text-transform:uppercase;color:#999;font-weight:700}.stop-name-route{font-weight:600;font-size:.8rem;color:#333}
         .stop-code-pill{background:#eee;color:#666;padding:1px 4px;border-radius:3px;font-size:.6rem;font-weight:600}
-        
         .suggestions-list{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ddd;border-top:none;border-radius:0 0 10px 10px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:50;max-height:170px;overflow-y:auto;display:none}
         .suggestion-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:.82rem;color:#333}.suggestion-item:hover{background:#f9f9f9;color:#dc0530}
         .toggle-container{display:flex;align-items:center;gap:6px;cursor:pointer}
@@ -113,6 +111,23 @@
         .intersect-box{background:linear-gradient(135deg,#f8f9fa,#fff);border:1px solid #e8e8e8;border-radius:10px;padding:10px 12px;margin-bottom:10px}
         .intersect-title{font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
         .intersect-lines{display:flex;flex-wrap:wrap;gap:6px}
+
+        /* STILI PER GLI AVVISI SCRAPED DA TMB */
+        #avvisiContainer { font-size: 0.85rem; color: #333; line-height: 1.4; overflow-x: hidden; }
+        #avvisiContainer h1, #avvisiContainer h2, #avvisiContainer h3 { font-weight: 800; color: #dc0530; margin-top: 15px; margin-bottom: 5px; }
+        #avvisiContainer h2 { font-size: 1.1rem; }
+        #avvisiContainer h3 { font-size: 0.95rem; color: #111; }
+        #avvisiContainer p { margin-bottom: 10px; }
+        #avvisiContainer ul { padding-left: 20px; list-style-type: disc; margin-bottom: 10px; }
+        #avvisiContainer li { margin-bottom: 4px; }
+        #avvisiContainer svg { display: inline-block; width: 18px; height: 18px; margin-right: 5px; vertical-align: middle; fill: currentColor; }
+        #avvisiContainer img { max-width: 100%; border-radius: 6px; }
+        #avvisiContainer .sr-only, #avvisiContainer .visually-hidden { display: none !important; }
+        #avvisiContainer button { display: none !important; }
+        #avvisiContainer .c-alert { background: #fef2f2; border-left: 4px solid #dc0530; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        #avvisiContainer .c-alert--warning { background: #fffbeb; border-left-color: #ffc107; }
+        #avvisiContainer .c-alert__title { font-weight: bold; margin-bottom: 5px; }
+        #avvisiContainer [class*="hidden"], #avvisiContainer [style*="display: none"] { display: block !important; } /* Rivela tutto l'SSR */
     </style>
 </head>
 <body>
@@ -120,20 +135,12 @@
     <div class="header-bar">
         <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 gradient-red rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm border border-red-700">
-                    <span class="text-white font-bold" style="font-size:10px">TMB</span>
-                </div>
+                <div class="w-7 h-7 gradient-red rounded-lg flex items-center justify-center flex-shrink-0"><span class="text-white font-bold" style="font-size:9px">TMB</span></div>
                 <h1 class="text-sm font-bold text-gray-800">TMB Barcelona</h1>
             </div>
             <div class="flex items-center gap-3">
-                <div class="toggle-container" onclick="toggleAR()">
-                    <div class="toggle-switch active" id="arToggle"></div>
-                    <span style="font-size:.65rem;color:#999">Auto</span>
-                </div>
-                <div class="flex items-center gap-1">
-                    <div class="refresh-dot" id="rDot"></div>
-                    <span id="clock" style="font-size:.75rem;font-weight:700;color:#333"></span>
-                </div>
+                <div class="toggle-container" onclick="toggleAR()"><div class="toggle-switch active" id="arToggle"></div><span style="font-size:.65rem;color:#999">Auto</span></div>
+                <div class="flex items-center gap-1"><div class="refresh-dot" id="rDot"></div><span id="clock" style="font-size:.75rem;font-weight:700;color:#333"></span></div>
             </div>
         </div>
     </div>
@@ -158,10 +165,7 @@
                     </div>
                     <button onclick="cSug();doSearch()" class="btn-primary" style="padding:10px 14px">🔍</button>
                 </div>
-                <div id="qFav" class="mb-3 hidden">
-                    <p class="text-gray-400 text-xs mb-1">⭐</p>
-                    <div id="favBtns" class="flex flex-wrap gap-1"></div>
-                </div>
+                <div id="qFav" class="mb-3 hidden"><p class="text-gray-400 text-xs mb-1">⭐</p><div id="favBtns" class="flex flex-wrap gap-1"></div></div>
                 <div id="sInfo" class="hidden mb-3 card-bus p-3 rounded-xl fade-in">
                     <div class="flex items-center justify-between gap-2">
                         <div class="min-w-0 flex-1">
@@ -180,119 +184,64 @@
                     <div id="intersectLines" class="intersect-lines"></div>
                 </div>
                 <div id="results" class="space-y-2 mt-3"></div>
-                <div id="conns" class="hidden mt-3 card-bus p-3 rounded-xl">
-                    <h3 class="font-bold text-gray-700 mb-2 text-xs">🚇 Metro</h3>
-                    <div id="connList" class="flex flex-wrap gap-1"></div>
-                </div>
-                <div id="loading" class="hidden py-8 flex flex-col items-center">
-                    <div class="loading-spinner"></div>
-                </div>
-                <div id="errBox" class="hidden card-bus p-3 text-center rounded-xl">
-                    <p id="errTxt" class="text-gray-600 text-xs"></p>
-                </div>
+                <div id="conns" class="hidden mt-3 card-bus p-3 rounded-xl"><h3 class="font-bold text-gray-700 mb-2 text-xs">🚇 Metro</h3><div id="connList" class="flex flex-wrap gap-1"></div></div>
+                <div id="loading" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
+                <div id="errBox" class="hidden card-bus p-3 text-center rounded-xl"><p id="errTxt" class="text-gray-600 text-xs"></p></div>
             </div>
             
             <div id="contentLinee" class="content-padding hidden">
-                <div class="mb-3">
-                    <input type="text" id="lnSearch" placeholder="Filtra linee TMB..." class="input-modern" oninput="fltLn()">
-                </div>
-                <div id="lnLoad" class="hidden py-8 flex flex-col items-center">
-                    <div class="loading-spinner"></div>
-                </div>
+                <div class="mb-3"><input type="text" id="lnSearch" placeholder="Filtra linee TMB..." class="input-modern" oninput="fltLn()"></div>
+                <div id="lnLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
                 <div id="lnContent"></div>
             </div>
             
             <div id="contentPercorso" class="content-padding hidden">
                 <div class="space-y-3 mb-3">
-                    <div class="relative">
-                        <label class="block text-xs text-gray-400 mb-1 font-semibold">DA</label>
-                        <div class="relative">
-                            <input type="text" id="rFrom" placeholder="Indirizzo o fermata..." class="input-modern pr-8" oninput="hAI(this,'fL')" autocomplete="off">
-                            <button onclick="useML()" class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-1">📍</button>
-                        </div>
-                        <div id="fL" class="suggestions-list"></div>
-                    </div>
-                    <div class="relative">
-                        <label class="block text-xs text-gray-400 mb-1 font-semibold">A</label>
-                        <input type="text" id="rTo" placeholder="Destinazione..." class="input-modern" oninput="hAI(this,'tL')" autocomplete="off">
-                        <div id="tL" class="suggestions-list"></div>
-                    </div>
+                    <div class="relative"><label class="block text-xs text-gray-400 mb-1 font-semibold">DA</label><div class="relative"><input type="text" id="rFrom" placeholder="Indirizzo, PDI o fermata..." class="input-modern pr-8" oninput="hAI(this,'fL')" autocomplete="off"><button onclick="useML()" class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-1">📍</button></div><div id="fL" class="suggestions-list"></div></div>
+                    <div class="relative"><label class="block text-xs text-gray-400 mb-1 font-semibold">A</label><input type="text" id="rTo" placeholder="Destinazione o Ristorante..." class="input-modern" oninput="hAI(this,'tL')" autocomplete="off"><div id="tL" class="suggestions-list"></div></div>
                     <button onclick="calcRoute()" class="btn-primary w-full">🗺️ Calcola</button>
                 </div>
-                <div id="rLoad" class="hidden py-8 flex flex-col items-center">
-                    <div class="loading-spinner"></div>
-                </div>
+                <div id="rLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
                 <div id="rRes" class="space-y-3"></div>
             </div>
             
             <div id="contentVicinanze" class="content-padding hidden">
                 <button onclick="geoLoc()" class="btn-secondary w-full mb-3">📍 Trova Fermate Vicine</button>
-                <div id="gLoad" class="hidden py-8 flex flex-col items-center">
-                    <div class="loading-spinner"></div>
-                </div>
-                <div id="gErr" class="hidden card-bus p-3 text-center rounded-xl">
-                    <p id="gErrTxt" class="text-gray-600 text-xs"></p>
-                </div>
+                <div id="gLoad" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
+                <div id="gErr" class="hidden card-bus p-3 text-center rounded-xl"><p id="gErrTxt" class="text-gray-600 text-xs"></p></div>
                 <div id="nbList"></div>
-                <div id="nbInit" class="text-center py-8">
-                    <div class="text-3xl mb-2">📍</div>
-                    <p class="text-gray-400 text-xs">Trova le fermate vicine</p>
-                </div>
+                <div id="nbInit" class="text-center py-8"><div class="text-3xl mb-2">📍</div><p class="text-gray-400 text-xs">Trova le fermate vicine</p></div>
             </div>
             
             <div id="contentPreferiti" class="content-padding hidden">
-                <div class="mb-3">
-                    <input type="text" id="sStops" placeholder="Cerca fermata..." class="input-modern" oninput="fltSt()">
-                </div>
-                <div class="mb-4">
-                    <h3 class="font-bold text-gray-700 mb-2 text-xs">★ Preferite</h3>
-                    <div id="favList" class="card-bus rounded-xl max-h-32 overflow-y-auto scrollbar-custom"></div>
-                </div>
-                <div>
-                    <h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte</h3>
-                    <div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div>
-                </div>
+                <div class="mb-3"><input type="text" id="sStops" placeholder="Cerca fermata..." class="input-modern" oninput="fltSt()"></div>
+                <div class="mb-4"><h3 class="font-bold text-gray-700 mb-2 text-xs">★ Preferite</h3><div id="favList" class="card-bus rounded-xl max-h-32 overflow-y-auto scrollbar-custom"></div></div>
+                <div><h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte</h3><div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div></div>
             </div>
 
+            <!-- TAB AVVISI - CON SCRAPER -->
             <div id="contentAvvisi" class="content-padding hidden fade-in">
                 <div class="mb-3">
-                    <h3 class="font-bold text-gray-800 text-sm mb-1">Stato del Servizio TMB</h3>
-                    <p class="text-xs text-gray-500">Avvisi in tempo reale su interruzioni, deviazioni e allerte per bus e metro.</p>
+                    <h3 class="font-bold text-gray-800 text-sm mb-1">Stato della Rete (Live)</h3>
+                    <p class="text-xs text-gray-500">Avvisi attuali e programmati estratti in tempo reale dai link ufficiali TMB.</p>
                 </div>
                 
-                <div class="card-bus rounded-xl overflow-hidden shadow-sm border border-gray-200 relative" style="height: 480px; background: white;">
-                    <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 text-gray-400 z-0">
-                        <span class="text-3xl mb-2">ℹ️</span>
-                        <p class="text-xs font-semibold">Feed Ufficiale @TMBinfo</p>
-                        <p class="text-xs mt-1">Caricamento avvisi...<br>(Se non compare nulla, potresti avere un ad-blocker attivo)</p>
-                    </div>
-                    <div class="relative z-10 w-full h-full overflow-y-auto bg-white">
-                        <a class="twitter-timeline" data-height="480" data-theme="light" data-chrome="noheader nofooter noborders" href="https://twitter.com/TMBinfo?ref_src=twsrc%5Etfw"></a>
-                        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-                    </div>
+                <div class="direction-tabs mb-3">
+                    <button class="direction-tab active" id="btnAvvisiMetro" onclick="loadAvvisi('metro')">🚇 Metro</button>
+                    <button class="direction-tab" id="btnAvvisiBus" onclick="loadAvvisi('bus')">🚌 Bus</button>
                 </div>
                 
-                <button onclick="window.open('https://www.tmb.cat/ca/barcelona/estat-servei', '_blank')" class="btn-primary w-full mt-4 flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                    Apri pagina ufficiale Allerte
-                </button>
+                <div id="avvisiContainer" class="card-bus rounded-xl overflow-y-auto p-4 bg-white" style="height: calc(100vh - 220px);">
+                    <!-- L'HTML formattato comparirà qui -->
+                </div>
             </div>
             
         </div>
-        
         <div class="panel-right">
             <div id="map"></div>
-            <button onclick="centerMe()" class="location-btn" id="locBtn">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
-            </button>
+            <button onclick="centerMe()" class="location-btn" id="locBtn"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg></button>
             <div class="map-stop-popup" id="mPop">
-                <div class="flex items-center justify-between gap-2">
-                    <div class="min-w-0 flex-1">
-                        <h3 id="popN" class="font-bold text-sm text-gray-800 truncate"></h3>
-                        <p id="popC" class="text-gray-400 text-xs"></p>
-                    </div>
-                    <button onclick="viewPop()" class="btn-primary" style="padding:5px 10px;font-size:.7rem">VEDI</button>
-                </div>
+                <div class="flex items-center justify-between gap-2"><div class="min-w-0 flex-1"><h3 id="popN" class="font-bold text-sm text-gray-800 truncate"></h3><p id="popC" class="text-gray-400 text-xs"></p></div><button onclick="viewPop()" class="btn-primary" style="padding:5px 10px;font-size:.7rem">VEDI</button></div>
                 <div id="popB" class="mt-2 space-y-1"></div>
             </div>
         </div>
@@ -318,9 +267,9 @@ function raceSuccess(promises) {
     });
 }
 
-// Motore di rete parallelo estremamente veloce (Solo TMB)
-async function F(url, ttl = 0) {
-    if (ttl > 0) {
+// MOTORE DI RETE: Aggiunto supporto al formato Testo Puro (HTML) per lo scraper.
+async function F(url, ttl = 0, rawText = false) {
+    if (ttl > 0 && !rawText) {
         const cached = localStorage.getItem('tmbf_' + url); 
         if (cached) {
             try {
@@ -331,30 +280,31 @@ async function F(url, ttl = 0) {
     }
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); 
+    const timeoutId = setTimeout(() => controller.abort(), 6000); 
 
     const p1 = fetch(url, { signal: controller.signal }).then(r => {
         if(!r.ok) throw new Error();
-        return r.json().catch(async () => JSON.parse(await r.text()));
+        return rawText ? r.text() : r.json().catch(async () => JSON.parse(await r.text()));
     });
     
     const p2 = fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}&disableCache=true`, { signal: controller.signal })
         .then(r => r.json())
         .then(d => {
             if(!d || !d.contents) throw new Error();
+            if(rawText) return d.contents;
             return typeof d.contents === 'string' ? JSON.parse(d.contents) : d.contents;
         });
         
     const p3 = fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { signal: controller.signal })
         .then(r => {
             if(!r.ok) throw new Error();
-            return r.json().catch(async () => JSON.parse(await r.text()));
+            return rawText ? r.text() : r.json().catch(async () => JSON.parse(await r.text()));
         });
 
     try {
         const res = await raceSuccess([p1, p2, p3]);
         clearTimeout(timeoutId);
-        if (ttl > 0 && res && !res.error && !res.error_message) {
+        if (ttl > 0 && res && !res.error && !res.error_message && !rawText) {
             try { localStorage.setItem('tmbf_' + url, JSON.stringify({t: Date.now(), d: res})); } catch(e){}
         }
         return res;
@@ -371,11 +321,10 @@ let allS=[],fav=JSON.parse(localStorage.getItem('tmbF')||'[]'),curS=null,map=nul
 let allLn=[],lnLoaded=false,clStops={a:[],r:[],aLabel:'',rLabel:''},clName='',clCode='',aDir='a';
 let arOn=true,rSt={from:null,to:null},dTmr,abC=null;const sC=new Map();
 let stopLinesCache={};
-let currentRoutesData = []; // Nuova variabile per conservare i percorsi
+let currentRoutesData = []; 
 
 function tst(t,m,e=false){const el=document.getElementById('toast');document.getElementById('tT').textContent=t;document.getElementById('tM').textContent=m;el.className='toast-notification'+(e?' error':'');el.style.display='block';setTimeout(()=>el.style.display='none',2800)}
 setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
-document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
 function sTab(t){
     ['cerca','linee','percorso','vicinanze','preferiti','avvisi'].forEach(x=>{
@@ -383,85 +332,28 @@ function sTab(t){
         document.getElementById('content'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('hidden',x!==t);
     });
     if(t==='preferiti'){rFL();rAS()}
-    if(t==='linee'&&!lnLoaded)loadLn()
+    if(t==='linee'&&!lnLoaded)loadLn();
+    if(t==='avvisi'&&!window.avvisiLoaded){loadAvvisi('metro'); window.avvisiLoaded=true;}
 }
 
-function gLC(l){
-    const u=(l||'').toUpperCase();
-    if(u.startsWith('V'))return'line-v';
-    if(u.startsWith('H'))return'line-h';
-    if(u.startsWith('D'))return'line-d';
-    if(u.startsWith('X'))return'line-x';
-    return'line-normal';
-}
-
-function gLCC(n){
-    const u=(n||'').toUpperCase();
-    if(u.startsWith('V'))return'green';
-    if(u.startsWith('H'))return'blue';
-    if(u.startsWith('D'))return'purple';
-    return'';
-}
-
+function gLC(l){const u=(l||'').toUpperCase();if(u.startsWith('V'))return'line-v';if(u.startsWith('H'))return'line-h';if(u.startsWith('D'))return'line-d';if(u.startsWith('X'))return'line-x';return'line-normal';}
+function gLCC(n){const u=(n||'').toUpperCase();if(u.startsWith('V'))return'green';if(u.startsWith('H'))return'blue';if(u.startsWith('D'))return'purple';return'';}
 function fA(m){if(m<=0)return'<span class="time-display time-green">⚡</span>';if(m<=2)return`<span class="time-display time-green">${m}\'</span>`;if(m<=5)return`<span class="time-display time-orange">${m}\'</span>`;return`<span class="time-display time-red">${m}\'</span>`}
 function toggleAR(){arOn=!arOn;document.getElementById('arToggle').classList.toggle('active',arOn);document.getElementById('rDot').classList.toggle('paused',!arOn);if(arOn)startAR();else stopAR()}
+function startAR(){stopAR();if(arOn)arInt=setInterval(()=>doSearch(true),15000)}
+function stopAR(){if(arInt){clearInterval(arInt);arInt=null}}
 
 let ssT;
 function hSS(){clearTimeout(ssT);const q=document.getElementById('stopCode').value.trim();if(q.length<2){cSug();return}ssT=setTimeout(()=>{if(!allS.length)return;const s=q.toLowerCase(),m=allS.filter(x=>x.code.toString().startsWith(s)||x.name.toLowerCase().includes(s)).slice(0,8);const c=document.getElementById('sSug');if(!m.length){c.style.display='none';return}c.innerHTML=m.map(x=>`<div class="stop-suggestion-item" onclick="document.getElementById('stopCode').value='${x.code}';cSug();doSearch()"><div class="stop-sugg-name">🚏 ${x.name}</div><div class="stop-sugg-code">#${x.code}</div></div>`).join('');c.style.display='block'},200)}
 function cSug(){document.getElementById('sSug').style.display='none'}
 
 function clearMap(){mkrs.forEach(m=>map.removeLayer(m));mkrs=[];if(selMkr){map.removeLayer(selMkr);selMkr=null}}
+function hlOnMap(code){if(selMkr){map.removeLayer(selMkr);selMkr=null}const s=allS.find(x=>x.code==code);if(!s||!s.lat||!s.lon)return;const yI=L.divIcon({className:'',html:`<div style="width:20px;height:20px;background:#ffc107;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(255,193,7,.6),0 2px 8px rgba(0,0,0,.3);z-index:9000"></div>`,iconSize:[20,20],iconAnchor:[10,10]});selMkr=L.marker([s.lat,s.lon],{icon:yI,zIndexOffset:9000}).addTo(map);selMkr.bindTooltip(`<strong>📍 ${s.name}</strong><br>#${s.code}`,{direction:'top',offset:[0,-12]});map.setView([s.lat,s.lon],17,{animate:true})}
 
-function hlOnMap(code){
-    if(selMkr){map.removeLayer(selMkr);selMkr=null}
-    const s=allS.find(x=>x.code==code);
-    if(!s||!s.lat||!s.lon)return;
-    const yI=L.divIcon({className:'',html:`<div style="width:20px;height:20px;background:#ffc107;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(255,193,7,.6),0 2px 8px rgba(0,0,0,.3);z-index:9000"></div>`,iconSize:[20,20],iconAnchor:[10,10]});
-    selMkr=L.marker([s.lat,s.lon],{icon:yI,zIndexOffset:9000}).addTo(map);
-    selMkr.bindTooltip(`<strong>📍 ${s.name}</strong><br>#${s.code}`,{direction:'top',offset:[0,-12]});
-    map.setView([s.lat,s.lon],17,{animate:true})
-}
-
-async function loadStopLines(code){
-    if(stopLinesCache[code])return stopLinesCache[code];
-    try{
-        const d=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000);
-        if(d.features?.length){
-            const props=d.features[0].properties;
-            let lines=[];
-            const liniesStr=props.LINIES||props.linies||props.LINIA||'';
-            if(liniesStr) lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));
-            if(!lines.length&&props.lines) lines=props.lines.filter(l=>!l.toUpperCase().startsWith('N'));
-            stopLinesCache[code]=lines;
-            return lines;
-        }
-    }catch(e){}
-    return[];
-}
-
-async function getStopAllLines(code, ibusLines){
-    const lineSet=new Set(ibusLines||[]);
-    try{const apiLines=await loadStopLines(code);apiLines.forEach(l=>lineSet.add(l));}catch(e){}
-    return[...lineSet].filter(l=>!l.toUpperCase().startsWith('N')).sort((a,b)=>natS(a,b));
-}
-
-function renderIntersections(lines, currentStopCode){
-    const box=document.getElementById('intersectBox');
-    const cont=document.getElementById('intersectLines');
-    if(!lines||!lines.length){box.classList.add('hidden');return}
-    cont.innerHTML=lines.map(l=>{
-        const lineData=allLn.find(x=>x.name.toUpperCase()===l.toUpperCase());
-        const lineCode=lineData?.code||'';
-        const onclick=lineCode?`onclick="openLine('${lineCode}','${l}')"`:`onclick="tst('Linea ${l}','Carica prima il tab Linee',true)"`;
-        return`<div class="bus-badge-sm ${gLC(l)}" ${onclick} title="Apri linea ${l}">${l}</div>`;
-    }).join('');
-    box.classList.remove('hidden');
-}
-
-function openLine(lineCode, lineName){
-    sTab('linee');
-    setTimeout(()=>loadLS(lineCode,lineName),100);
-}
+async function loadStopLines(code){if(stopLinesCache[code])return stopLinesCache[code];try{const d=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000);if(d.features?.length){const props=d.features[0].properties;let lines=[];const liniesStr=props.LINIES||props.linies||props.LINIA||'';if(liniesStr) lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));if(!lines.length&&props.lines) lines=props.lines.filter(l=>!l.toUpperCase().startsWith('N'));stopLinesCache[code]=lines;return lines;}}catch(e){}return[];}
+async function getStopAllLines(code, ibusLines){const lineSet=new Set(ibusLines||[]);try{const apiLines=await loadStopLines(code);apiLines.forEach(l=>lineSet.add(l));}catch(e){}return[...lineSet].filter(l=>!l.toUpperCase().startsWith('N')).sort((a,b)=>natS(a,b));}
+function renderIntersections(lines, currentStopCode){const box=document.getElementById('intersectBox');const cont=document.getElementById('intersectLines');if(!lines||!lines.length){box.classList.add('hidden');return}cont.innerHTML=lines.map(l=>{const lineData=allLn.find(x=>x.name.toUpperCase()===l.toUpperCase());const lineCode=lineData?.code||'';const onclick=lineCode?`onclick="openLine('${lineCode}','${l}')"`:`onclick="tst('Linea ${l}','Carica prima il tab Linee',true)"`;return`<div class="bus-badge-sm ${gLC(l)}" ${onclick} title="Apri linea ${l}">${l}</div>`;}).join('');box.classList.remove('hidden');}
+function openLine(lineCode, lineName){sTab('linee');setTimeout(()=>loadLS(lineCode,lineName),100);}
 
 async function doSearch(sil=false){
     let code=document.getElementById('stopCode').value.trim();
@@ -477,10 +369,12 @@ async function doSearch(sil=false){
     if(!sil){document.getElementById('loading').classList.remove('hidden');document.getElementById('results').innerHTML='';document.getElementById('errBox').classList.add('hidden');document.getElementById('sInfo').classList.add('hidden');document.getElementById('conns').classList.add('hidden');document.getElementById('intersectBox').classList.add('hidden'); clearMap();} 
     
     try{
-        const [sd, dataTMB] = await Promise.all([
+        const promises = [
             sil ? Promise.resolve(null) : F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000).catch(()=>null),
             F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`).catch(()=>null)
-        ]);
+        ];
+        
+        const [sd, dataTMB] = await Promise.all(promises);
         
         if(!sil){
             if(sd && sd.features?.length){
@@ -503,7 +397,6 @@ async function doSearch(sil=false){
         document.getElementById('sUpd').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
         let buses = [];
-        
         if(dataTMB && dataTMB.data?.ibus?.length){
             buses = dataTMB.data.ibus;
         }
@@ -515,7 +408,7 @@ async function doSearch(sil=false){
         }
         
         document.getElementById('errBox').classList.add('hidden');
-        document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-3 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x['text-ca']?x['text-ca']:''}</p></div></div><div class="flex-shrink-0 text-right">${fA(x['t-in-min'])}</div></div></div>`).join('');
+        document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-3 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x['text-ca']||''}</p></div></div><div class="flex-shrink-0 text-right">${fA(x['t-in-min'])}</div></div></div>`).join('');
 
         if(!sil){
             const allLineNames=[...new Set(buses.map(b=>b.line))];
@@ -534,16 +427,12 @@ async function doSearch(sil=false){
     }
 }
 
-function startAR(){stopAR();if(arOn)arInt=setInterval(()=>doSearch(true),15000)}
-function stopAR(){if(arInt){clearInterval(arInt);arInt=null}}
-
 function togFav(){if(!curS)return;const i=fav.findIndex(f=>f.code===curS.code);if(i>-1)fav.splice(i,1);else fav.push(curS);localStorage.setItem('tmbF',JSON.stringify(fav));updFB();rQF();tst(i>-1?'Rimossa':'Aggiunta',curS.name)}
 function updFB(){const b=document.getElementById('favBtn');const f=fav.some(x=>x.code===curS?.code);b.textContent=f?'★':'☆';b.classList.toggle('active',f)}
 function rQF(){const c=document.getElementById('favBtns'),w=document.getElementById('qFav');if(!fav.length){w.classList.add('hidden');return}w.classList.remove('hidden');c.innerHTML=fav.map(f=>`<button onclick="document.getElementById('stopCode').value='${f.code}';doSearch()" class="favorite-chip">${f.code}-${f.name.substring(0,8)}</button>`).join('')}
 function rFL(){const c=document.getElementById('favList');if(!fav.length){c.innerHTML='<p class="p-3 text-gray-400 text-center text-xs">—</p>';return}c.innerHTML=fav.map(f=>`<div class="stop-item flex items-center justify-between"><div class="flex-1 min-w-0" onclick="selSt('${f.code}')"><span class="font-bold text-red-600 text-xs">${f.code}</span> <span class="text-gray-600 text-xs">${f.name}</span></div><button onclick="fav=fav.filter(x=>x.code!=='${f.code}');localStorage.setItem('tmbF',JSON.stringify(fav));rFL();rQF()" class="text-gray-300 hover:text-red-500 text-sm px-1">✕</button></div>`).join('')}
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
-// RESET CHIAVE CACHE PER RIMUOVERE RESIDUI AMB
 async function loadAllS(){
     const lsKey = 'tmbf_all_stops_tmb_only_v1';
     const cached = localStorage.getItem(lsKey);
@@ -558,18 +447,16 @@ async function loadAllS(){
     }
     try {
         const d_tmb = await F(`${BU}/transit/parades?app_id=${AID}&app_key=${AKEY}`);
-        let tmbStops = [];
-        if (d_tmb?.features) {
-            tmbStops = d_tmb.features.map(f=>({
+        if (d_tmb && d_tmb.features) {
+            allS = d_tmb.features.map(f=>({
                 code:String(f.properties.CODI_PARADA||f.properties.CODI),
-                name:f.properties.NOM_PARADA||f.properties.NOM||'Fermata TMB',
+                name:f.properties.NOM_PARADA||f.properties.NOM||'Fermata',
                 lat:f.geometry.coordinates[1],
                 lon:f.geometry.coordinates[0]
             })).filter(s=>s.code);
+            allS.sort((a,b)=>parseInt(a.code)-parseInt(b.code));
+            try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allS})); } catch(e){}
         }
-        
-        allS = tmbStops.sort((a,b)=>natS(a.code,b.code));
-        if(allS.length) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allS})); } catch(e){}
     } catch(e) {}
 }
 
@@ -595,17 +482,15 @@ async function loadLn(){
     
     try{
         const d_tmb = await F(`${BU}/transit/linies/bus?app_id=${AID}&app_key=${AKEY}`);
-        let tmbLns = [];
         if(d_tmb) {
-            let res = d_tmb?.features || (Array.isArray(d_tmb)?d_tmb:[]);
-            tmbLns = res.map(x=>{const p=x.properties||x;return{code:String(p.CODI_LINIA||''),name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||''}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+            let res = d_tmb.features || (Array.isArray(d_tmb)?d_tmb:[]);
+            allLn = res.map(x=>{const p=x.properties||x;return{code:String(p.CODI_LINIA||''),name:p.NOM_LINIA||p.CODI_LINIA||'?',desc:p.DESC_LINIA||'',origin:p.ORIGEN_LINIA||'',dest:p.DESTI_LINIA||''}}).filter(l=>l.code&&!l.name.toUpperCase().startsWith('N'));
+            allLn.sort((a,b)=>natS(a.name,b.name));
+            try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allLn})); } catch(e){}
+            lnLoaded=true; renderLn();
         }
-        
-        allLn = tmbLns.filter(l => l.name && l.name !== '?').sort((a,b)=>natS(a.name,b.name));
-        if(allLn.length) try { localStorage.setItem(lsKey, JSON.stringify({t: Date.now(), d: allLn})); } catch(e){}
-        lnLoaded=true; renderLn();
     }catch(e){
-        document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore Server</div><div class="error-detail">Si è verificato un errore nel caricamento. Riprova.</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
+        document.getElementById('lnContent').innerHTML=`<div class="error-box"><div class="error-title">Errore Server</div><div class="error-detail">Riprova tra poco.</div><button onclick="lnLoaded=false;loadLn()" class="btn-retry">Riprova</button></div>`
     }
     document.getElementById('lnLoad').classList.add('hidden');
 }
@@ -648,9 +533,8 @@ async function loadLS(lc,ln){
     const lineMeta = allLn.find(l => l.code == lc) || {origin: '', dest: ''};
 
     try{
-        let d, f = [];
-        d = await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 1800000); 
-        f = d?.features||(Array.isArray(d)?d:null) || [];
+        let d = await F(`${BU}/transit/linies/bus/${lc}/parades?app_id=${AID}&app_key=${AKEY}`, 1800000); 
+        let f = d?.features||(Array.isArray(d)?d:null) || [];
         
         if(!f?.length)throw new Error('Nessuna fermata trovata per questa linea.');
         
@@ -766,8 +650,7 @@ async function showNb(){if(!uLoc||!allS.length)return;
 }
 async function lNbA(code){const c=document.getElementById('nb-'+code);if(!c)return;try{
     const d = await F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`);
-    let b = [];
-    if(d.data?.ibus?.length) b = d.data.ibus;
+    let b = d.data?.ibus?.length ? d.data.ibus : [];
     if(b.length){const t=b.filter(b=>!(b.line||'').toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']).slice(0,3);c.innerHTML=t.length?t.map(b=>`<span class="bus-badge-sm ${gLC(b.line)}" style="cursor:default;font-size:.6rem;padding:2px 4px;min-width:24px;margin-right:1px">${b.line}</span><span class="text-xs ${b['t-in-min']<=2?'text-green-500':'text-red-500'} mr-2">${b['t-in-min']<=0?'⚡':b['t-in-min']+"'"}</span>`).join(''):'—'}else c.innerHTML='—'}catch(e){c.innerHTML='—'}}
 
 function initMap(){map=L.map('map',{zoomControl:true}).setView([41.3851,2.1734],13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'©OSM'}).addTo(map)}
@@ -776,9 +659,7 @@ function centerMe(){navigator.geolocation.getCurrentPosition(p=>{uLoc={lat:p.coo
 let popS=null;
 async function mapClick(s){popS=s;document.getElementById('popN').textContent=s.name;document.getElementById('popC').textContent='#'+s.code;document.getElementById('mPop').classList.add('show');hlOnMap(s.code);try{
     const d=await F(`${BU}/ibus/stops/${s.code}?app_id=${AID}&app_key=${AKEY}`);
-    let b = [];
-    if(d.data?.ibus?.length) b = d.data.ibus;
-    
+    let b = d.data?.ibus?.length ? d.data.ibus : [];
     if(b.length){const flt=b.filter(x=>!(x.line||'').toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']).slice(0,4);document.getElementById('popB').innerHTML=flt.map(x=>`<div class="flex items-center justify-between"><div class="flex items-center gap-1"><span class="bus-badge-sm ${gLC(x.line)}" style="cursor:default;font-size:.65rem;padding:2px 5px;min-width:28px">${x.line}</span><span class="text-xs text-gray-500 truncate" style="max-width:80px">${x.destination||''}</span></div><span class="text-xs font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('')}else document.getElementById('popB').innerHTML='<span class="text-gray-300 text-xs">—</span>'}catch(e){document.getElementById('popB').innerHTML=''}}
 function viewPop(){if(popS){selSt(popS.code);document.getElementById('mPop').classList.remove('show')}}
 
@@ -803,7 +684,7 @@ async function calcRoute(){
             const bi=data.plan.itineraries.filter(it=>it.legs.some(l=>l.mode!=='WALK'));
             if(!bi.length){rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun mezzo pubblico, solo a piedi</p></div>';return}
             
-            currentRoutesData = []; // Azzera i dati dei percorsi precedenti
+            currentRoutesData = []; 
             let htmlStr = '';
             
             bi.slice(0,3).forEach((it,idx)=>{
@@ -847,7 +728,7 @@ async function calcRoute(){
             });
             rd.innerHTML = htmlStr;
             if(currentRoutesData.length > 0){
-                drawRouteOnMap(0); // Disegna automaticamente il primo sulla mappa
+                drawRouteOnMap(0); 
             }
         }else{
             rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun percorso</p></div>';
@@ -858,7 +739,6 @@ async function calcRoute(){
     }
 }
 
-// Nuova funzione per disegnare un percorso specifico quando ci clicchi sopra
 function drawRouteOnMap(idx) {
     document.querySelectorAll('.route-card').forEach((card, i) => {
         card.style.border = i === idx ? '2px solid #dc0530' : '1px solid #eee';
@@ -889,6 +769,52 @@ function drawRouteOnMap(idx) {
     });
     
     if(bounds.length)map.fitBounds(bounds,{padding:[40,40]});
+}
+
+// =========================================================================
+// FUNZIONI DI SCRAPING PER IL TAB AVVISI
+// =========================================================================
+async function loadAvvisi(type) {
+    document.getElementById('btnAvvisiMetro').classList.toggle('active', type === 'metro');
+    document.getElementById('btnAvvisiBus').classList.toggle('active', type === 'bus');
+    
+    const c = document.getElementById('avvisiContainer');
+    c.innerHTML = '<div class="py-8 flex flex-col items-center"><div class="loading-spinner"></div><p class="text-xs text-gray-400 mt-2">Scraping dal sito ufficiale in corso...</p></div>';
+    
+    const url = type === 'metro' 
+        ? 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-metro' 
+        : 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-bus';
+        
+    try {
+        // Usa F() chiedendo esplicitamente il testo crudo (rawText = true)
+        const html = await F(url, 0, true); 
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        // Cerca il blocco principale dei contenuti
+        let main = doc.querySelector('.l-main') || doc.querySelector('main') || doc.querySelector('#app') || doc.body;
+        
+        // Rimuovi tutto ciò che potrebbe rompere il design o che è inutile
+        const noise = ['header', 'footer', 'nav', 'script', 'style', 'noscript', 'form', '.cookie-banner', '#onetrust-consent-sdk', '.breadcrumb'];
+        noise.forEach(sel => main.querySelectorAll(sel).forEach(el => el.remove()));
+        
+        // Correggi i link relativi
+        main.querySelectorAll('a').forEach(a => {
+            let h = a.getAttribute('href');
+            if(h && h.startsWith('/')) a.href = 'https://www.tmb.cat' + h;
+            a.target = '_blank';
+        });
+        
+        // Rimuove blocchi vuoti per evitare spazi morti giganteschi
+        main.querySelectorAll('div').forEach(div => {
+            if(!div.textContent.trim() && !div.querySelector('img, svg')) div.remove();
+        });
+
+        c.innerHTML = main.innerHTML || '<p class="text-center text-gray-500">Nessun avviso trovato.</p>';
+        
+    } catch(e) {
+        c.innerHTML = `<div class="p-4 text-center text-red-500 font-bold">Errore durante lo scraping.<br><span class="text-xs font-normal">I server TMB stanno bloccando la richiesta, riprova più tardi.</span></div>`;
+    }
 }
 
 document.addEventListener('DOMContentLoaded',async()=>{initMap();await loadAllS();rQF();document.addEventListener('click',e=>{if(!e.target.closest('.search-input-wrapper')&&!e.target.closest('.stop-suggestions'))cSug();if(!e.target.closest('.suggestions-list')&&!e.target.closest('.input-modern'))document.querySelectorAll('.suggestions-list').forEach(l=>l.style.display='none');if(!e.target.closest('.map-stop-popup')&&!e.target.closest('.leaflet-marker-icon'))document.getElementById('mPop').classList.remove('show')})});
