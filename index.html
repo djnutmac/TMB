@@ -110,11 +110,6 @@
         .refresh-dot{width:6px;height:6px;border-radius:50%;background:#00c853;animation:pg 2s ease-in-out infinite;display:inline-block}.refresh-dot.paused{background:#ccc;animation:none}
         .intersect-title{font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
         .intersect-lines{display:flex;flex-wrap:wrap;gap:6px}
-
-        /* STILI PER GLI AVVISI API */
-        #avvisiContainer { font-size: 0.85rem; color: #333; line-height: 1.4; overflow-x: hidden; padding-bottom: 20px;}
-        #avvisiContainer a { color: #dc0530; text-decoration: underline; }
-        #avvisiContainer b, #avvisiContainer strong { font-weight: 700; color: #111; }
     </style>
 </head>
 <body>
@@ -170,7 +165,6 @@
                     <div class="intersect-title">🔀 Intersezioni — Linee disponibili</div>
                     <div id="intersectLines" class="intersect-lines"></div>
                 </div>
-                <div id="ibusDsp" class="hidden"></div>
                 <div id="results" class="space-y-2 mt-3"></div>
                 <div id="conns" class="hidden mt-3 card-bus p-3 rounded-xl"><h3 class="font-bold text-gray-700 mb-2 text-xs">🚇 Metro</h3><div id="connList" class="flex flex-wrap gap-1"></div></div>
                 <div id="loading" class="hidden py-8 flex flex-col items-center"><div class="loading-spinner"></div></div>
@@ -207,20 +201,14 @@
                 <div><h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte</h3><div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div></div>
             </div>
 
-            <!-- TAB AVVISI - CON API DINAMICO TMB -->
             <div id="contentAvvisi" class="content-padding hidden fade-in">
-                <div class="mb-3">
-                    <h3 class="font-bold text-gray-800 text-sm mb-1">Stato della Rete (Live)</h3>
-                    <p class="text-xs text-gray-500">Avvisi attuali e programmati estratti in tempo reale dai link ufficiali TMB.</p>
-                </div>
-                
                 <div class="direction-tabs mb-3">
                     <button class="direction-tab active" id="btnAvvisiMetro" onclick="loadAvvisi('metro')">🚇 Metro</button>
                     <button class="direction-tab" id="btnAvvisiBus" onclick="loadAvvisi('bus')">🚌 Bus</button>
                 </div>
                 
-                <div id="avvisiContainer" class="card-bus rounded-xl overflow-y-auto p-4 bg-white" style="height: calc(100vh - 220px);">
-                    <!-- HTML formattato -->
+                <div id="avvisiContainer" class="card-bus rounded-xl overflow-y-auto bg-white" style="height: calc(100vh - 200px);">
+                    <!-- Generato dinamicamente -->
                 </div>
             </div>
             
@@ -255,7 +243,7 @@ function raceSuccess(promises) {
     });
 }
 
-// RESTAURATA LA FUNZIONE DI RETE ORIGINALE: solo per JSON, velocissima, non si inceppa
+// RESTAURATA LA FUNZIONE DI RETE ORIGINALE: solo per JSON, velocissima
 async function F(url, ttl = 0) {
     if (ttl > 0) {
         const cached = localStorage.getItem('tmbf_' + url); 
@@ -301,71 +289,39 @@ async function F(url, ttl = 0) {
     }
 }
 
-// NUOVO MOTORE AVVISI BASATO SU API UFFICIALI (VELOCE E SICURO)
-async function loadAvvisi(type) {
+// FUNZIONE PER CARICARE GLI AVVISI UFFICIALI E IL FEED LIVE
+function loadAvvisi(type) {
     document.getElementById('btnAvvisiMetro').classList.toggle('active', type === 'metro');
     document.getElementById('btnAvvisiBus').classList.toggle('active', type === 'bus');
     
+    const url = type === 'metro' 
+        ? 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-metro' 
+        : 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-bus';
+
     const c = document.getElementById('avvisiContainer');
-    c.innerHTML = '<div class="py-8 flex flex-col items-center"><div class="loading-spinner"></div><p class="text-xs text-gray-400 mt-2">Scaricamento avvisi in tempo reale...</p></div>';
+    c.innerHTML = `
+        <div class="p-4 text-center mt-2">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 text-blue-600 mb-4">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h4 class="font-bold text-gray-800 text-lg mb-2">Stato della Rete TMB</h4>
+            <p class="text-sm text-gray-500 mb-6">Consulta in tempo reale le interruzioni, i lavori programmati e le allerte del servizio <b>${type.toUpperCase()}</b> direttamente sulla piattaforma ufficiale TMB.</p>
+            <button onclick="window.open('${url}', '_blank')" class="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                Apri Pagina Ufficiale TMB
+            </button>
+            <div class="mt-8 text-left">
+                <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3">Feed X (Twitter) Ufficiale in Diretta</p>
+                <div class="rounded-xl overflow-hidden border border-gray-200" style="height: 400px; background:#fff">
+                    <a class="twitter-timeline" data-height="400" data-theme="light" data-chrome="noheader nofooter noborders" href="https://twitter.com/TMBinfo?ref_src=twsrc%5Etfw">Caricamento tweet live...</a>
+                    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"><\/script>
+                </div>
+            </div>
+        </div>
+    `;
     
-    try {
-        // Usa l'API ufficiale TMB delle "Alteracions" (Interruzioni) - Cache 5 minuti
-        const data = await F(`${BU}/transit/alteracions?app_id=${AID}&app_key=${AKEY}`, 300000); 
-        const alerts = data?.features || [];
-        
-        let filtered = alerts.filter(a => {
-            const props = a.properties || {};
-            const transport = (props.NOM_TRANSPORT || '').toUpperCase();
-            // Determina in base al parametro passato
-            if (type === 'metro') return transport === 'METRO';
-            if (type === 'bus') return transport === 'BUS';
-            return true;
-        });
-
-        if(!filtered.length) {
-            c.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 mt-10"><span class="text-4xl mb-2">✅</span><p class="font-bold text-sm text-green-600">Servizio Regolare</p><p class="text-xs text-center mt-1">Non ci sono avvisi o interruzioni<br>per questa rete in questo momento.</p></div>';
-            return;
-        }
-
-        let html = '';
-        filtered.forEach(item => {
-            const p = item.properties || {};
-            const title = p.RESUM_ALTERACIO || p.TITOL || 'Avviso di Servizio';
-            const desc = p.DESCRIPCIO_ALTERACIO || p.DESCRIPCIO || '';
-            const lines = p.LINIES || '';
-            const typeAlert = p.TIPUS_ALTERACIO || ''; // es. "Afectació programada" o "Afectació actual"
-
-            // Colora il bordo in base alla gravità (giallo programmato, rosso attuale)
-            const isProgrammed = typeAlert.toLowerCase().includes('programada');
-            const borderColor = isProgrammed ? 'border-yellow-400' : 'border-red-500';
-            const icon = isProgrammed ? '🚧' : '⚠️';
-
-            html += `
-            <div class="bg-white border-l-4 ${borderColor} border-y border-r border-gray-100 rounded-lg p-3 mb-3 shadow-sm">
-                <div class="flex items-start gap-2 mb-1">
-                    <span class="text-lg leading-none mt-0.5">${icon}</span>
-                    <div>
-                        <h4 class="font-bold text-gray-800 text-sm leading-tight">${title}</h4>
-                        ${typeAlert ? `<span class="text-[0.65rem] uppercase font-bold text-gray-400 tracking-wider block mt-1">${typeAlert}</span>` : ''}
-                    </div>
-                </div>
-                ${lines ? `<div class="mb-2 mt-2 pl-7 flex flex-wrap gap-1">${lines.split(',').map(l=>`<span class="bus-badge-sm ${gLC(l.trim())}" style="font-size:0.65rem; padding: 2px 6px;">${l.trim()}</span>`).join('')}</div>` : ''}
-                <div class="text-xs text-gray-600 pl-7 leading-relaxed break-words">${desc}</div>
-            </div>`;
-        });
-
-        c.innerHTML = html;
-        
-    } catch(e) {
-        c.innerHTML = `
-            <div class="p-4 text-center mt-4">
-                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 text-red-500 mb-3">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                </div>
-                <h4 class="font-bold text-gray-800 mb-1">Dati non disponibili</h4>
-                <p class="text-xs text-gray-500 mb-4">Impossibile scaricare gli avvisi API in questo momento.</p>
-            </div>`;
+    if(window.twttr && window.twttr.widgets) {
+        window.twttr.widgets.load();
     }
 }
 
@@ -719,7 +675,7 @@ async function mapClick(s){popS=s;document.getElementById('popN').textContent=s.
 function viewPop(){if(popS){selSt(popS.code);document.getElementById('mPop').classList.remove('show')}}
 
 function hAI(inp,lid){clearTimeout(dTmr);const q=inp.value.trim();const list=document.getElementById(lid);if(lid==='fL')rSt.from=null;if(lid==='tL')rSt.to=null;if(q.length<3){list.style.display='none';return}const local=allS.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())||s.code.toString().startsWith(q)).slice(0,3).map(s=>({t:'s',n:`${s.name} (${s.code})`,lat:s.lat,lon:s.lon}));rMx(local,[],lid);dTmr=setTimeout(async()=>{if(abC)abC.abort();abC=new AbortController();const sig=abC.signal;if(sC.has(q)){rMx(local,sC.get(q),lid);return}try{const d=await F(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=41.3851&lon=2.1734&limit=5`);if(!sig.aborted){sC.set(q,d);rMx(local,d,lid)}}catch(e){}},500)}
-function rMx(local,remote,lid){const list=document.getElementById(lid);list.innerHTML='';const all=[...local];if(remote?.features?.length){remote.features.forEach(x=>{const p=x.properties;let n=p.name||'';if(p.street)n+=(n?', ':'')+p.street;if(p.city&&!n.includes(p.city))n+=(n?', ':'')+p.city;if(!n)n=p.osm_value||'Luogo';all.push({t:'a',n:n,lat:x.geometry.coordinates[1],lon:x.geometry.coordinates[0]})})}if(!all.length){list.style.display='none';return}all.slice(0,6).forEach(item=>{const div=document.createElement('div');div.className='suggestion-item';div.innerHTML=`${item.t==='s'?'🚏':'📍'} ${item.n}`;div.onclick=()=>{document.getElementById(lid==='fL'?'rFrom':'rTo').value=item.n;if(lid==='fL')rSt.from={lat:item.lat,lon:item.lon};else rSt.to={lat:item.lat,lon:item.lon};list.style.display='none'};list.appendChild(div)});list.style.display='block'}
+function rMx(local,remote,lid){const list=document.getElementById(lid);list.innerHTML='';const all=[...local];if(remote?.features?.length){remote.features.forEach(x=>{const p=x.properties;let n=p.name||'';if(p.street)n+=(n?', ':'')+p.street;if(p.city&&!n.includes(p.city))n+=(n?', ':'')+p.city;if(!n)n=p.osm_value||'Luogo';all.push({t:'a',n:n,lat:x.geometry.coordinates[1],lon:x.geometry.coordinates[0]})})}if(!all.length){list.style.display='none';return}all.slice(0,6).forEach(item=>{const div=document.createElement('div');div.className='suggestion-item';let n=item.n;if(item.t==='a')n=n.split(',').slice(0,3).join(',');div.innerHTML=`${item.t==='s'?'🚏':'📍'} ${n}`;div.onclick=()=>{document.getElementById(lid==='fL'?'rFrom':'rTo').value=n;if(lid==='fL')rSt.from={lat:item.lat,lon:item.lon};else rSt.to={lat:item.lat,lon:item.lon};list.style.display='none'};list.appendChild(div)});list.style.display='block'}
 function useML(){const inp=document.getElementById('rFrom');inp.value='📍...';navigator.geolocation.getCurrentPosition(p=>{rSt.from={lat:p.coords.latitude,lon:p.coords.longitude};inp.value='📍 Posizione'},()=>{inp.value=''})}
 
 async function calcRoute(){
@@ -826,7 +782,21 @@ function drawRouteOnMap(idx) {
     if(bounds.length)map.fitBounds(bounds,{padding:[40,40]});
 }
 
-document.addEventListener('DOMContentLoaded',async()=>{initMap();await loadAllS();rQF();document.addEventListener('click',e=>{if(!e.target.closest('.search-input-wrapper')&&!e.target.closest('.stop-suggestions'))cSug();if(!e.target.closest('.suggestions-list')&&!e.target.closest('.input-modern'))document.querySelectorAll('.suggestions-list').forEach(l=>l.style.display='none');if(!e.target.closest('.map-stop-popup')&&!e.target.closest('.leaflet-marker-icon'))document.getElementById('mPop').classList.remove('show')})});
+document.addEventListener('DOMContentLoaded',async()=>{
+    initMap();
+    await loadAllS();
+    rQF();
+    document.addEventListener('click',e=>{
+        if(!e.target.closest('.search-input-wrapper')&&!e.target.closest('.stop-suggestions')) cSug();
+        if(!e.target.closest('.suggestions-list')&&!e.target.closest('.input-modern')) {
+            document.querySelectorAll('.suggestions-list').forEach(l=>l.style.display='none');
+        }
+        if(!e.target.closest('.map-stop-popup')&&!e.target.closest('.leaflet-marker-icon')) {
+            const m = document.getElementById('mPop');
+            if(m) m.classList.remove('show');
+        }
+    });
+});
 </script>
 </body>
 </html>
