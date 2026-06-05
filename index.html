@@ -310,51 +310,43 @@ async function F(url, ttl = 0) {
 //     https://www.tmb.cat/ca/-/asset_publisher/T008gFXWe2mx/rss?p_p_id=101_INSTANCE_T008gFXWe2mx&...
 //   Usiamo il feed semplificato tramite proxy.
 
-const TMB_RSS_METRO = 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-metro/-/asset_publisher/tJ4sxXoSBYPJ/rss';
-const TMB_RSS_BUS   = 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-bus/-/asset_publisher/AKN7TSmIFEj6/rss';
-// Fallback: feed generale avisos
-const TMB_RSS_AVISOS = 'https://www.tmb.cat/ca/-/asset_publisher/T008gFXWe2mx/rss?p_p_id=101_INSTANCE_T008gFXWe2mx&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_cacheability=cacheLevelFull&p_p_col_id=column-1&p_p_col_pos=0&p_p_col_count=1';
+// ── AVVISI: endpoint nativo TMB /transit/alteracions ─────────────────────────
+// Usa le stesse credenziali app_id/app_key e la funzione F() già presente.
+// Endpoint: GET /v1/transit/alteracions?app_id=...&app_key=...
+// Filtro per tipo:
+//   metro → campo "mode" o "tipus_transport" contiene "metro" / "M"
+//   bus   → campo "mode" o "tipus_transport" contiene "bus"   / "B"
+// I campi esatti variano — gestiamo entrambe le strutture note.
 
-async function fetchRSS(rssUrl) {
-    // allorigins: proxy CORS gratuito, restituisce {contents: "<xml>..."}
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}&disableCache=true`;
-    const r = await fetch(proxy, {signal: AbortSignal.timeout(8000)});
-    if (!r.ok) throw new Error('proxy error');
-    const j = await r.json();
-    if (!j.contents) throw new Error('empty');
-    return j.contents; // stringa XML/HTML
+function parseAlteracio(a) {
+    // Normalizza i campi indipendentemente dalla struttura di risposta
+    return {
+        id:       a.id_alteracio || a.ID || a.id || '',
+        titol:    a.titol || a.TITOL || a.title || a.nom || '',
+        desc:     a.descripcio || a.DESCRIPCIO || a.description || a.desc || '',
+        inici:    a.data_inici || a.DATA_INICI || a.start_date || '',
+        fi:       a.data_fi    || a.DATA_FI    || a.end_date   || '',
+        linies:   a.linies     || a.LINIES     || a.lines      || [],
+        tipus:    (a.tipus_transport || a.TIPUS_TRANSPORT || a.mode || a.MODE || '').toUpperCase(),
+        url:      a.url || a.URL || ''
+    };
 }
 
-function parseRSSItems(xmlStr) {
-    // Parsing manuale – DOMParser disponibile nel browser
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlStr, 'text/xml');
-    const items = [...doc.querySelectorAll('item')];
-    return items.map(item => {
-        const title   = item.querySelector('title')?.textContent?.trim() || '';
-        const link    = item.querySelector('link')?.textContent?.trim() || '';
-        const desc    = item.querySelector('description')?.textContent?.trim() || '';
-        const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
-        // Rimuovi tag HTML dalla description
-        const tmp = document.createElement('div');
-        tmp.innerHTML = desc;
-        const descText = tmp.textContent || tmp.innerText || '';
-        return { title, link, desc: descText.substring(0, 220), pubDate };
-    }).filter(i => i.title);
+function fmtDataAlteracio(d) {
+    if (!d) return '';
+    try { return new Date(d).toLocaleString('it-IT', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'}); }
+    catch(e) { return d; }
 }
 
 function renderAvvisiCards(items, type, urlOfficiale) {
     const c = document.getElementById('avvisiContainer');
-    const icon = type === 'metro' ? '🚇' : '🚌';
-    const colorClass = type === 'metro' ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200';
-    const badgeClass = type === 'metro' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
-    
+
     if (!items.length) {
         c.innerHTML = `
           <div class="p-5 text-center">
             <div class="text-4xl mb-3">✅</div>
-            <h4 class="font-bold text-gray-700 text-sm mb-1">Nessuna alterazione segnalata</h4>
-            <p class="text-xs text-gray-400 mb-4">Il servizio ${type.toUpperCase()} risulta regolare al momento.</p>
+            <h4 class="font-bold text-gray-700 text-sm mb-1">Nessuna alterazione attiva</h4>
+            <p class="text-xs text-gray-400 mb-4">Il servizio ${type === 'metro' ? 'Metro' : 'Bus'} risulta regolare.</p>
             <a href="${urlOfficiale}" target="_blank" rel="noopener" class="btn-primary inline-flex items-center gap-2 text-xs px-4 py-2">
               Verifica su TMB.cat
             </a>
@@ -362,67 +354,84 @@ function renderAvvisiCards(items, type, urlOfficiale) {
         return;
     }
 
-    let html = `<div class="p-3 space-y-3">`;
-    items.slice(0, 10).forEach(item => {
-        // Formatta data
-        let dataFmt = '';
-        try { dataFmt = new Date(item.pubDate).toLocaleString('it-IT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch(e){}
-        const linkHtml = item.link
-            ? `<a href="${item.link}" target="_blank" rel="noopener" class="text-xs text-blue-500 hover:underline font-semibold mt-1 inline-block">Dettagli →</a>`
+    const icon      = type === 'metro' ? '🚇' : '🚌';
+    const borderCls = type === 'metro' ? 'border-blue-200 bg-blue-50' : 'border-red-100 bg-red-50';
+    const badgeCls  = type === 'metro' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
+
+    let html = `<div class="p-3 space-y-3">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">${items.length} alterazion${items.length === 1 ? 'e' : 'i'} attiv${items.length === 1 ? 'a' : 'e'}</span>
+        <span class="text-xs text-gray-300">${new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>`;
+
+    items.forEach((a, i) => {
+        const descTxt = (() => { const t = document.createElement('div'); t.innerHTML = a.desc; return (t.textContent||'').trim().substring(0,240); })();
+        const iniStr  = fmtDataAlteracio(a.inici);
+        const fiStr   = fmtDataAlteracio(a.fi);
+        const liniesBadges = Array.isArray(a.linies)
+            ? a.linies.slice(0,6).map(l => {
+                const n = l.nom_linia || l.NOM_LINIA || l.name || l;
+                return `<span class="bus-badge-sm ${gLC(n)}" style="cursor:default;font-size:.6rem;padding:2px 5px;min-width:22px">${n}</span>`;
+              }).join('')
             : '';
+        const detailLink = a.url
+            ? `<a href="${a.url}" target="_blank" rel="noopener" class="text-xs text-blue-500 hover:underline font-semibold">Dettagli →</a>`
+            : '';
+
         html += `
-          <div class="rounded-xl border ${colorClass} p-3 fade-in">
+          <div class="rounded-xl border ${borderCls} p-3 fade-in" style="animation-delay:${i*.04}s">
             <div class="flex items-start gap-2">
-              <span class="text-lg flex-shrink-0">${icon}</span>
+              <span class="text-base flex-shrink-0 mt-0.5">${icon}</span>
               <div class="flex-1 min-w-0">
-                <p class="font-semibold text-gray-800 text-xs leading-snug mb-1">${item.title}</p>
-                ${item.desc ? `<p class="text-gray-500 text-xs leading-relaxed mb-1">${item.desc}${item.desc.length >= 220 ? '…' : ''}</p>` : ''}
-                <div class="flex items-center justify-between gap-2 mt-1">
-                  ${dataFmt ? `<span class="${badgeClass} text-xs px-2 py-0.5 rounded-full font-medium">${dataFmt}</span>` : '<span></span>'}
-                  ${linkHtml}
+                <p class="font-semibold text-gray-800 text-xs leading-snug mb-1">${a.titol || '—'}</p>
+                ${descTxt ? `<p class="text-gray-500 text-xs leading-relaxed mb-2">${descTxt}${descTxt.length>=240?'…':''}</p>` : ''}
+                ${liniesBadges ? `<div class="flex flex-wrap gap-1 mb-2">${liniesBadges}</div>` : ''}
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <div class="flex flex-col gap-0.5">
+                    ${iniStr ? `<span class="${badgeCls} text-xs px-2 py-0.5 rounded-full font-medium">Dal ${iniStr}</span>` : ''}
+                    ${fiStr  ? `<span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-medium">Al ${fiStr}</span>` : ''}
+                  </div>
+                  ${detailLink}
                 </div>
               </div>
             </div>
           </div>`;
     });
 
-    // Pulsante link ufficiale + X
     html += `
-      <div class="pt-2 flex flex-col gap-2">
-        <a href="${urlOfficiale}" target="_blank" rel="noopener" class="btn-primary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-          Apri pagina ufficiale TMB
-        </a>
-        <a href="https://x.com/TMBinfo" target="_blank" rel="noopener" class="btn-secondary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl" style="background:linear-gradient(135deg,#111,#333)">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          Seguici su @TMBinfo (live)
-        </a>
-      </div>
+      <a href="${urlOfficiale}" target="_blank" rel="noopener"
+         class="btn-primary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl mt-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+        Apri pagina ufficiale TMB
+      </a>
     </div>`;
     c.innerHTML = html;
 }
 
-function renderAvvisiFallback(type, urlOfficiale, errMsg) {
+function renderAvvisiFallback(type, urlOfficiale, errDetail) {
     const c = document.getElementById('avvisiContainer');
     c.innerHTML = `
-      <div class="p-5">
-        <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center mb-4">
-          <div class="text-2xl mb-2">⚠️</div>
-          <p class="font-semibold text-amber-800 text-xs mb-1">Feed avvisi non disponibile</p>
-          <p class="text-amber-600 text-xs">${errMsg || 'Riprova tra poco.'}</p>
+      <div class="p-4">
+        <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center mb-4">
+          <div class="text-2xl mb-1">⚠️</div>
+          <p class="font-semibold text-amber-800 text-xs mb-1">Alterazioni non disponibili</p>
+          <p class="text-amber-600 text-xs">${errDetail || 'Riprova tra poco.'}</p>
         </div>
-        <p class="text-xs text-gray-500 mb-3 text-center">Le informazioni sullo stato della rete sono disponibili direttamente su TMB:</p>
         <div class="flex flex-col gap-2">
-          <a href="${urlOfficiale}" target="_blank" rel="noopener" class="btn-primary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          <a href="${urlOfficiale}" target="_blank" rel="noopener"
+             class="btn-primary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
             Stato rete ${type === 'metro' ? 'Metro' : 'Bus'} — TMB.cat
           </a>
-          <a href="https://www.tmb.cat/ca/transport-barcelona/avisos-servei" target="_blank" rel="noopener" class="btn-secondary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl">
+          <a href="https://www.tmb.cat/ca/transport-barcelona/avisos-servei" target="_blank" rel="noopener"
+             class="btn-secondary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl">
             🔔 Tutti gli avvisi di servizio
-          </a>
-          <a href="https://x.com/TMBinfo" target="_blank" rel="noopener" class="flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl font-semibold text-white" style="background:linear-gradient(135deg,#111,#333);border-radius:10px">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            @TMBinfo su X — aggiornamenti live
           </a>
         </div>
       </div>`;
@@ -435,67 +444,55 @@ async function loadAvvisi(type) {
     const urlOfficiale = type === 'metro'
         ? 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-metro'
         : 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-bus';
-    
-    // Mostra spinner
+
     const c = document.getElementById('avvisiContainer');
     c.innerHTML = `<div class="py-10 flex flex-col items-center gap-3">
         <div class="loading-spinner"></div>
-        <p class="text-xs text-gray-400">Caricamento avvisi TMB…</p>
+        <p class="text-xs text-gray-400">Caricamento alterazioni TMB…</p>
     </div>`;
 
-    // Tenta feed RSS via proxy (allorigins) con cache 5 min
-    const cacheKey = `tmb_rss_${type}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-        try {
+    // Cache 3 minuti (le alterazioni cambiano di rado ma vogliamo dati freschi)
+    const cacheKey = `tmb_alteracions_${type}`;
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
             const p = JSON.parse(cached);
-            if (Date.now() - p.t < 300000) { // 5 min
+            if (Date.now() - p.t < 180000) {
                 renderAvvisiCards(p.items, type, urlOfficiale);
                 return;
             }
-        } catch(e) {}
-    }
-
-    // Prova prima il feed specifico, poi il feed generale avisos
-    const feedUrls = type === 'metro'
-        ? [TMB_RSS_METRO, TMB_RSS_AVISOS]
-        : [TMB_RSS_BUS, TMB_RSS_AVISOS];
-
-    let items = null;
-    let lastErr = '';
-
-    for (const rssUrl of feedUrls) {
-        try {
-            const xml = await fetchRSS(rssUrl);
-            const parsed = parseRSSItems(xml);
-            // Filtra per tipo se usiamo il feed generale
-            if (rssUrl === TMB_RSS_AVISOS && type === 'metro') {
-                items = parsed.filter(i =>
-                    /metro|L[0-9]|linea|linia/i.test(i.title + i.desc) ||
-                    parsed.length <= 3 // se pochi, mostrali tutti
-                );
-                if (!items.length) items = parsed;
-            } else if (rssUrl === TMB_RSS_AVISOS && type === 'bus') {
-                items = parsed.filter(i =>
-                    /bus|linia|l[HVDXhvdx]|recomendaci/i.test(i.title + i.desc) ||
-                    parsed.length <= 3
-                );
-                if (!items.length) items = parsed;
-            } else {
-                items = parsed;
-            }
-            break; // feed ok, esce dal loop
-        } catch(e) {
-            lastErr = e.message || 'timeout';
         }
-    }
+    } catch(e) {}
 
-    if (items !== null) {
+    try {
+        // Endpoint nativo: /v1/transit/alteracions
+        const data = await F(`${BU}/transit/alteracions?app_id=${AID}&app_key=${AKEY}`, 0);
+
+        // La risposta può essere array diretto o {features:[...]} o {alteracions:[...]}
+        let raw = [];
+        if (Array.isArray(data))              raw = data;
+        else if (Array.isArray(data.features))    raw = data.features.map(f => f.properties || f);
+        else if (Array.isArray(data.alteracions)) raw = data.alteracions;
+        else if (Array.isArray(data.data))        raw = data.data;
+
+        const all = raw.map(parseAlteracio);
+
+        // Filtra per tipo di trasporto
+        const filterRe = type === 'metro'
+            ? /metro|M\b|METRO/i
+            : /bus|B\b|BUS/i;
+
+        let items = all.filter(a => filterRe.test(a.tipus));
+
+        // Se il campo tipus è assente/vuoto in tutte le voci, mostra tutto
+        if (!items.length && all.every(a => !a.tipus)) items = all;
+
         try { localStorage.setItem(cacheKey, JSON.stringify({t: Date.now(), items})); } catch(e) {}
         renderAvvisiCards(items, type, urlOfficiale);
-    } else {
-        // Tutti i feed falliti → fallback informativo con link
-        renderAvvisiFallback(type, urlOfficiale, `Il proxy CORS non ha raggiunto il feed TMB (${lastErr}). Il sito TMB blocca le richieste cross-origin da GitHub Pages.`);
+
+    } catch(err) {
+        renderAvvisiFallback(type, urlOfficiale,
+            `Errore API: ${err.message || 'nessuna risposta da /transit/alteracions'}`);
     }
 }
 
