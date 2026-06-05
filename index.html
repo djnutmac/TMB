@@ -133,7 +133,6 @@
         <button id="tabPercorso" onclick="sTab('percorso')" class="tab-btn">🗺️ Percorso</button>
         <button id="tabVicinanze" onclick="sTab('vicinanze')" class="tab-btn">📍 Vicinanze</button>
         <button id="tabPreferiti" onclick="sTab('preferiti')" class="tab-btn">⭐ Preferiti</button>
-        <button id="tabAvvisi" onclick="sTab('avvisi')" class="tab-btn">🔔 Avvisi</button>
     </div>
     
     <div class="main-split">
@@ -200,17 +199,6 @@
                 <div class="mb-4"><h3 class="font-bold text-gray-700 mb-2 text-xs">★ Preferite</h3><div id="favList" class="card-bus rounded-xl max-h-32 overflow-y-auto scrollbar-custom"></div></div>
                 <div><h3 class="font-bold text-gray-700 mb-2 text-xs">📍 Tutte</h3><div id="allList" class="card-bus rounded-xl max-h-44 overflow-y-auto scrollbar-custom"></div></div>
             </div>
-
-            <div id="contentAvvisi" class="content-padding hidden fade-in">
-                <div class="direction-tabs mb-3">
-                    <button class="direction-tab active" id="btnAvvisiMetro" onclick="loadAvvisi('metro')">🚇 Metro</button>
-                    <button class="direction-tab" id="btnAvvisiBus" onclick="loadAvvisi('bus')">🚌 Bus</button>
-                </div>
-                
-                <div id="avvisiContainer" class="card-bus rounded-xl overflow-y-auto bg-white" style="height: calc(100vh - 200px);">
-                    <!-- Generato dinamicamente -->
-                </div>
-            </div>
             
         </div>
         <div class="panel-right">
@@ -243,7 +231,6 @@ function raceSuccess(promises) {
     });
 }
 
-// RESTAURATA LA FUNZIONE DI RETE ORIGINALE: solo per JSON, velocissima
 async function F(url, ttl = 0) {
     if (ttl > 0) {
         const cached = localStorage.getItem('tmbf_' + url); 
@@ -289,213 +276,6 @@ async function F(url, ttl = 0) {
     }
 }
 
-// ─── AVVISI: RSS via allorigins + fallback UX ────────────────────────────────
-//
-// PERCHÉ NON FUNZIONAVA:
-//  1. tmb.cat blocca CORS e iframe da origini esterne (anche GitHub Pages).
-//     Non esiste endpoint /avisos o /alerts nell'API pubblica TMB v1.
-//  2. Il widget Twitter/X embed richiede JS di X caricato runtime e viene
-//     bloccato da CSP/mixed-content su GitHub Pages + browser moderni.
-//
-// SOLUZIONE ADOTTATA:
-//  • Feed RSS TMB ufficiale (avisos-servei) recuperato via allorigins CORS proxy → XML → parse → card native
-//  • Fallback: se il proxy fallisce, mostra card informativa con pulsante + link X/@TMBinfo
-//  • Il widget X è rimosso e sostituito con un link diretto (non bloccabile)
-//
-// RSS URLS TMB:
-//   Metro → https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-metro (feed RSS embedded)
-//   Bus   → https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-bus
-//   Avisos generale → https://www.tmb.cat/ca/transport-barcelona/avisos-servei
-//   RSS feed diretto:
-//     https://www.tmb.cat/ca/-/asset_publisher/T008gFXWe2mx/rss?p_p_id=101_INSTANCE_T008gFXWe2mx&...
-//   Usiamo il feed semplificato tramite proxy.
-
-// ── AVVISI: endpoint nativo TMB /transit/alteracions ─────────────────────────
-// Usa le stesse credenziali app_id/app_key e la funzione F() già presente.
-// Endpoint: GET /v1/transit/alteracions?app_id=...&app_key=...
-// Filtro per tipo:
-//   metro → campo "mode" o "tipus_transport" contiene "metro" / "M"
-//   bus   → campo "mode" o "tipus_transport" contiene "bus"   / "B"
-// I campi esatti variano — gestiamo entrambe le strutture note.
-
-function parseAlteracio(a) {
-    // Normalizza i campi indipendentemente dalla struttura di risposta
-    return {
-        id:       a.id_alteracio || a.ID || a.id || '',
-        titol:    a.titol || a.TITOL || a.title || a.nom || '',
-        desc:     a.descripcio || a.DESCRIPCIO || a.description || a.desc || '',
-        inici:    a.data_inici || a.DATA_INICI || a.start_date || '',
-        fi:       a.data_fi    || a.DATA_FI    || a.end_date   || '',
-        linies:   a.linies     || a.LINIES     || a.lines      || [],
-        tipus:    (a.tipus_transport || a.TIPUS_TRANSPORT || a.mode || a.MODE || '').toUpperCase(),
-        url:      a.url || a.URL || ''
-    };
-}
-
-function fmtDataAlteracio(d) {
-    if (!d) return '';
-    try { return new Date(d).toLocaleString('it-IT', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'}); }
-    catch(e) { return d; }
-}
-
-function renderAvvisiCards(items, type, urlOfficiale) {
-    const c = document.getElementById('avvisiContainer');
-
-    if (!items.length) {
-        c.innerHTML = `
-          <div class="p-5 text-center">
-            <div class="text-4xl mb-3">✅</div>
-            <h4 class="font-bold text-gray-700 text-sm mb-1">Nessuna alterazione attiva</h4>
-            <p class="text-xs text-gray-400 mb-4">Il servizio ${type === 'metro' ? 'Metro' : 'Bus'} risulta regolare.</p>
-            <a href="${urlOfficiale}" target="_blank" rel="noopener" class="btn-primary inline-flex items-center gap-2 text-xs px-4 py-2">
-              Verifica su TMB.cat
-            </a>
-          </div>`;
-        return;
-    }
-
-    const icon      = type === 'metro' ? '🚇' : '🚌';
-    const borderCls = type === 'metro' ? 'border-blue-200 bg-blue-50' : 'border-red-100 bg-red-50';
-    const badgeCls  = type === 'metro' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
-
-    let html = `<div class="p-3 space-y-3">
-      <div class="flex items-center justify-between mb-1">
-        <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">${items.length} alterazion${items.length === 1 ? 'e' : 'i'} attiv${items.length === 1 ? 'a' : 'e'}</span>
-        <span class="text-xs text-gray-300">${new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</span>
-      </div>`;
-
-    items.forEach((a, i) => {
-        const descTxt = (() => { const t = document.createElement('div'); t.innerHTML = a.desc; return (t.textContent||'').trim().substring(0,240); })();
-        const iniStr  = fmtDataAlteracio(a.inici);
-        const fiStr   = fmtDataAlteracio(a.fi);
-        const liniesBadges = Array.isArray(a.linies)
-            ? a.linies.slice(0,6).map(l => {
-                const n = l.nom_linia || l.NOM_LINIA || l.name || l;
-                return `<span class="bus-badge-sm ${gLC(n)}" style="cursor:default;font-size:.6rem;padding:2px 5px;min-width:22px">${n}</span>`;
-              }).join('')
-            : '';
-        const detailLink = a.url
-            ? `<a href="${a.url}" target="_blank" rel="noopener" class="text-xs text-blue-500 hover:underline font-semibold">Dettagli →</a>`
-            : '';
-
-        html += `
-          <div class="rounded-xl border ${borderCls} p-3 fade-in" style="animation-delay:${i*.04}s">
-            <div class="flex items-start gap-2">
-              <span class="text-base flex-shrink-0 mt-0.5">${icon}</span>
-              <div class="flex-1 min-w-0">
-                <p class="font-semibold text-gray-800 text-xs leading-snug mb-1">${a.titol || '—'}</p>
-                ${descTxt ? `<p class="text-gray-500 text-xs leading-relaxed mb-2">${descTxt}${descTxt.length>=240?'…':''}</p>` : ''}
-                ${liniesBadges ? `<div class="flex flex-wrap gap-1 mb-2">${liniesBadges}</div>` : ''}
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                  <div class="flex flex-col gap-0.5">
-                    ${iniStr ? `<span class="${badgeCls} text-xs px-2 py-0.5 rounded-full font-medium">Dal ${iniStr}</span>` : ''}
-                    ${fiStr  ? `<span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-medium">Al ${fiStr}</span>` : ''}
-                  </div>
-                  ${detailLink}
-                </div>
-              </div>
-            </div>
-          </div>`;
-    });
-
-    html += `
-      <a href="${urlOfficiale}" target="_blank" rel="noopener"
-         class="btn-primary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl mt-1">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-        </svg>
-        Apri pagina ufficiale TMB
-      </a>
-    </div>`;
-    c.innerHTML = html;
-}
-
-function renderAvvisiFallback(type, urlOfficiale, errDetail) {
-    const c = document.getElementById('avvisiContainer');
-    c.innerHTML = `
-      <div class="p-4">
-        <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center mb-4">
-          <div class="text-2xl mb-1">⚠️</div>
-          <p class="font-semibold text-amber-800 text-xs mb-1">Alterazioni non disponibili</p>
-          <p class="text-amber-600 text-xs">${errDetail || 'Riprova tra poco.'}</p>
-        </div>
-        <div class="flex flex-col gap-2">
-          <a href="${urlOfficiale}" target="_blank" rel="noopener"
-             class="btn-primary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-            </svg>
-            Stato rete ${type === 'metro' ? 'Metro' : 'Bus'} — TMB.cat
-          </a>
-          <a href="https://www.tmb.cat/ca/transport-barcelona/avisos-servei" target="_blank" rel="noopener"
-             class="btn-secondary flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl">
-            🔔 Tutti gli avvisi di servizio
-          </a>
-        </div>
-      </div>`;
-}
-
-async function loadAvvisi(type) {
-    document.getElementById('btnAvvisiMetro').classList.toggle('active', type === 'metro');
-    document.getElementById('btnAvvisiBus').classList.toggle('active', type === 'bus');
-
-    const urlOfficiale = type === 'metro'
-        ? 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-metro'
-        : 'https://www.tmb.cat/ca/transport-barcelona/estat-xarxa-bus';
-
-    const c = document.getElementById('avvisiContainer');
-    c.innerHTML = `<div class="py-10 flex flex-col items-center gap-3">
-        <div class="loading-spinner"></div>
-        <p class="text-xs text-gray-400">Caricamento alterazioni TMB…</p>
-    </div>`;
-
-    // Cache 3 minuti (le alterazioni cambiano di rado ma vogliamo dati freschi)
-    const cacheKey = `tmb_alteracions_${type}`;
-    try {
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-            const p = JSON.parse(cached);
-            if (Date.now() - p.t < 180000) {
-                renderAvvisiCards(p.items, type, urlOfficiale);
-                return;
-            }
-        }
-    } catch(e) {}
-
-    try {
-        // Endpoint nativo: /v1/transit/alteracions
-        const data = await F(`${BU}/transit/alteracions?app_id=${AID}&app_key=${AKEY}`, 0);
-
-        // La risposta può essere array diretto o {features:[...]} o {alteracions:[...]}
-        let raw = [];
-        if (Array.isArray(data))              raw = data;
-        else if (Array.isArray(data.features))    raw = data.features.map(f => f.properties || f);
-        else if (Array.isArray(data.alteracions)) raw = data.alteracions;
-        else if (Array.isArray(data.data))        raw = data.data;
-
-        const all = raw.map(parseAlteracio);
-
-        // Filtra per tipo di trasporto
-        const filterRe = type === 'metro'
-            ? /metro|M\b|METRO/i
-            : /bus|B\b|BUS/i;
-
-        let items = all.filter(a => filterRe.test(a.tipus));
-
-        // Se il campo tipus è assente/vuoto in tutte le voci, mostra tutto
-        if (!items.length && all.every(a => !a.tipus)) items = all;
-
-        try { localStorage.setItem(cacheKey, JSON.stringify({t: Date.now(), items})); } catch(e) {}
-        renderAvvisiCards(items, type, urlOfficiale);
-
-    } catch(err) {
-        renderAvvisiFallback(type, urlOfficiale,
-            `Errore API: ${err.message || 'nessuna risposta da /transit/alteracions'}`);
-    }
-}
-
 function decPL(s,p){let i=0,la=0,lo=0,c=[],sh,r,b,f=Math.pow(10,p||5);while(i<s.length){b=null;sh=0;r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);la+=((r&1)?~(r>>1):(r>>1));sh=r=0;do{b=s.charCodeAt(i++)-63;r|=(b&0x1f)<<sh;sh+=5}while(b>=0x20);lo+=((r&1)?~(r>>1):(r>>1));c.push([la/f,lo/f])}return c}
 function natS(a,b){const re=/(\d+)/g,ap=a.split(re),bp=b.split(re);for(let i=0;i<Math.max(ap.length,bp.length);i++){const x=ap[i]||'',y=bp[i]||'',xn=parseInt(x),yn=parseInt(y);if(!isNaN(xn)&&!isNaN(yn)){if(xn!==yn)return xn-yn}else{const c=x.localeCompare(y);if(c)return c}}return 0}
 
@@ -509,13 +289,12 @@ function tst(t,m,e=false){const el=document.getElementById('toast');document.get
 setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
 
 function sTab(t){
-    ['cerca','linee','percorso','vicinanze','preferiti','avvisi'].forEach(x=>{
+    ['cerca','linee','percorso','vicinanze','preferiti'].forEach(x=>{
         document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active',x===t);
         document.getElementById('content'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('hidden',x!==t);
     });
     if(t==='preferiti'){rFL();rAS()}
     if(t==='linee'&&!lnLoaded)loadLn();
-    if(t==='avvisi'){loadAvvisi('metro');}
 }
 
 function gLC(l){const u=(l||'').toUpperCase();if(u.startsWith('V'))return'line-v';if(u.startsWith('H'))return'line-h';if(u.startsWith('D'))return'line-d';if(u.startsWith('X'))return'line-x';return'line-normal';}
@@ -846,7 +625,7 @@ async function mapClick(s){popS=s;document.getElementById('popN').textContent=s.
 function viewPop(){if(popS){selSt(popS.code);document.getElementById('mPop').classList.remove('show')}}
 
 function hAI(inp,lid){clearTimeout(dTmr);const q=inp.value.trim();const list=document.getElementById(lid);if(lid==='fL')rSt.from=null;if(lid==='tL')rSt.to=null;if(q.length<3){list.style.display='none';return}const local=allS.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())||s.code.toString().startsWith(q)).slice(0,3).map(s=>({t:'s',n:`${s.name} (${s.code})`,lat:s.lat,lon:s.lon}));rMx(local,[],lid);dTmr=setTimeout(async()=>{if(abC)abC.abort();abC=new AbortController();const sig=abC.signal;if(sC.has(q)){rMx(local,sC.get(q),lid);return}try{const d=await F(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=41.3851&lon=2.1734&limit=5`);if(!sig.aborted){sC.set(q,d);rMx(local,d,lid)}}catch(e){}},500)}
-function rMx(local,remote,lid){const list=document.getElementById(lid);list.innerHTML='';const all=[...local];if(remote?.features?.length){remote.features.forEach(x=>{const p=x.properties;let n=p.name||'';if(p.street)n+=(n?', ':'')+p.street;if(p.city&&!n.includes(p.city))n+=(n?', ':'')+p.city;if(!n)n=p.osm_value||'Luogo';all.push({t:'a',n:n,lat:x.geometry.coordinates[1],lon:x.geometry.coordinates[0]})})}if(!all.length){list.style.display='none';return}all.slice(0,6).forEach(item=>{const div=document.createElement('div');div.className='suggestion-item';let n=item.n;if(item.t==='a')n=n.split(',').slice(0,3).join(',');div.innerHTML=`${item.t==='s'?'🚏':'📍'} ${n}`;div.onclick=()=>{document.getElementById(lid==='fL'?'rFrom':'rTo').value=n;if(lid==='fL')rSt.from={lat:item.lat,lon:item.lon};else rSt.to={lat:item.lat,lon:item.lon};list.style.display='none'};list.appendChild(div)});list.style.display='block'}
+function rMx(local,remote,lid){const list=document.getElementById(lid);list.innerHTML='';const all=[...local];if(remote?.features?.length){remote.features.forEach(x=>{const p=x.properties;let n=p.name||'';if(p.street)n+=(n?', ':'')+p.street;if(p.city&&!n.includes(p.city))n+=(n?', ':'')+p.city;if(!n)n=p.osm_value||'Luogo';all.push({t:'a',n:n,lat:x.geometry.coordinates[1],lon:x.geometry.coordinates[0]})})}if(!all.length){list.style.display='none';return}all.slice(0,6).forEach(item=>{const div=document.createElement('div');div.className='suggestion-item';div.innerHTML=`${item.t==='s'?'🚏':'📍'} ${item.n}`;div.onclick=()=>{document.getElementById(lid==='fL'?'rFrom':'rTo').value=item.n;if(lid==='fL')rSt.from={lat:item.lat,lon:item.lon};else rSt.to={lat:item.lat,lon:item.lon};list.style.display='none'};list.appendChild(div)});list.style.display='block'}
 function useML(){const inp=document.getElementById('rFrom');inp.value='📍...';navigator.geolocation.getCurrentPosition(p=>{rSt.from={lat:p.coords.latitude,lon:p.coords.longitude};inp.value='📍 Posizione'},()=>{inp.value=''})}
 
 async function calcRoute(){
