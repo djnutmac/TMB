@@ -371,6 +371,7 @@ let allS=[],fav=JSON.parse(localStorage.getItem('tmbF')||'[]'),curS=null,map=nul
 let allLn=[],lnLoaded=false,clStops={a:[],r:[],aLabel:'',rLabel:''},clName='',clCode='',aDir='a';
 let arOn=true,rSt={from:null,to:null},dTmr,abC=null;const sC=new Map();
 let stopLinesCache={};
+let currentRoutesData = []; // Nuova variabile per conservare i percorsi
 
 function tst(t,m,e=false){const el=document.getElementById('toast');document.getElementById('tT').textContent=t;document.getElementById('tM').textContent=m;el.className='toast-notification'+(e?' error':'');el.style.display='block';setTimeout(()=>el.style.display='none',2800)}
 setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
@@ -785,16 +786,110 @@ function hAI(inp,lid){clearTimeout(dTmr);const q=inp.value.trim();const list=doc
 function rMx(local,remote,lid){const list=document.getElementById(lid);list.innerHTML='';const all=[...local];if(remote?.features?.length){remote.features.forEach(x=>{const p=x.properties;let n=p.name||'';if(p.street)n+=(n?', ':'')+p.street;if(p.city&&!n.includes(p.city))n+=(n?', ':'')+p.city;if(!n)n=p.osm_value||'Luogo';all.push({t:'a',n:n,lat:x.geometry.coordinates[1],lon:x.geometry.coordinates[0]})})}if(!all.length){list.style.display='none';return}all.slice(0,6).forEach(item=>{const div=document.createElement('div');div.className='suggestion-item';div.innerHTML=`${item.t==='s'?'🚏':'📍'} ${item.n}`;div.onclick=()=>{document.getElementById(lid==='fL'?'rFrom':'rTo').value=item.n;if(lid==='fL')rSt.from={lat:item.lat,lon:item.lon};else rSt.to={lat:item.lat,lon:item.lon};list.style.display='none'};list.appendChild(div)});list.style.display='block'}
 function useML(){const inp=document.getElementById('rFrom');inp.value='📍...';navigator.geolocation.getCurrentPosition(p=>{rSt.from={lat:p.coords.latitude,lon:p.coords.longitude};inp.value='📍 Posizione'},()=>{inp.value=''})}
 
-async function calcRoute(){const from=document.getElementById('rFrom').value,to=document.getElementById('rTo').value,rd=document.getElementById('rRes'),rl=document.getElementById('rLoad');if(!from||!to){tst('','Compila entrambi',true);return}rd.innerHTML='';rl.classList.remove('hidden');try{if(!rSt.from){const d=await F(`https://photon.komoot.io/api/?q=${encodeURIComponent(from+', Barcelona')}&lat=41.3851&lon=2.1734&limit=1`);if(d?.features?.[0])rSt.from={lat:d.features[0].geometry.coordinates[1],lon:d.features[0].geometry.coordinates[0]}}if(!rSt.to){const d=await F(`https://photon.komoot.io/api/?q=${encodeURIComponent(to+', Barcelona')}&lat=41.3851&lon=2.1734&limit=1`);if(d?.features?.[0])rSt.to={lat:d.features[0].geometry.coordinates[1],lon:d.features[0].geometry.coordinates[0]}}if(!rSt.from||!rSt.to)throw new Error('Luogo non trovato, sii più specifico');const dt=new Date(),ds=`${(dt.getMonth()+1).toString().padStart(2,'0')}-${dt.getDate().toString().padStart(2,'0')}-${dt.getFullYear()}`,ts=`${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;const data=await F(`${BU}/planner/plan?fromPlace=${rSt.from.lat},${rSt.from.lon}&toPlace=${rSt.to.lat},${rSt.to.lon}&date=${ds}&time=${ts}&mode=TRANSIT,WALK&app_id=${AID}&app_key=${AKEY}`);rl.classList.add('hidden');
-if(data.plan?.itineraries?.length){const bi=data.plan.itineraries.filter(it=>it.legs.some(l=>l.mode!=='WALK'));if(!bi.length){rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun mezzo pubblico, solo a piedi</p></div>';return}mkrs.forEach(m=>map.removeLayer(m));mkrs=[];if(selMkr){map.removeLayer(selMkr);selMkr=null}
-bi.slice(0,3).forEach((it,idx)=>{const dur=Math.round(it.duration/60),st=new Date(it.startTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),et=new Date(it.endTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});let seg='',poly=[];it.legs.forEach(leg=>{if(leg.legGeometry?.points){let c='#dc0530';if(leg.mode==='WALK')c='#999';else if(leg.routeColor)c=`#${leg.routeColor}`;else if(leg.mode==='SUBWAY')c='#e2241a';const n=(leg.routeShortName||'').toUpperCase();if(leg.mode==='BUS'){if(n.startsWith('V'))c='#00a651';else if(n.startsWith('H'))c='#003888';else if(n.startsWith('D'))c='#8e44ad';else if(n.match(/^[MLEB]/))c='#ffde00'}poly.push({p:leg.legGeometry.points,c:c})}if(leg.mode==='WALK')seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:#fff;border-color:#ccc"></div><span class="segment-walk-info">🚶 ${Math.round(leg.duration/60)}' (${Math.round(leg.distance)}m)</span></div>`;else{const ln=leg.routeShortName||leg.route;let icn='🚌';if(leg.mode==='SUBWAY')icn='🚇';else if(leg.mode==='TRAM')icn='🚋';else if(leg.mode==='RAIL')icn='🚆';let bg=leg.routeColor?`background:#${leg.routeColor};`:'';let cls='bus-badge ';if(leg.mode==='BUS'&&ln.match(/^[VHDXMLEBN]/i))cls+=gLC(ln);else if(!bg)bg='background:#333;';seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:${leg.routeColor?`#${leg.routeColor}`:'#dc0530'}"></div><div class="segment-bus-info"><div class="flex items-center gap-2 mb-2"><div class="${cls}" style="${bg}font-size:.8rem;padding:4px 7px;min-width:34px">${icn} ${ln}</div><span class="text-xs text-gray-500 font-medium truncate">→ ${leg.headsign}</span></div><div><div class="stop-label">Sali</div><div class="stop-name-route">${leg.from.name}</div></div><div class="text-center my-1 text-gray-300 font-bold">↓</div><div><div class="stop-label">Scendi</div><div class="stop-name-route">${leg.to.name}</div></div></div></div>`}});
-rd.innerHTML+=`<div class="route-card fade-in"><div class="route-summary"><div class="route-time">${st}-${et}</div><div class="route-duration">${dur}'</div></div><div class="pl-2">${seg}</div></div>`;if(idx===0){let bounds=[];
-const pinStart=L.divIcon({className:'',html:'<div style="width:16px;height:16px;background:#00c853;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8]});
-const pinEnd=L.divIcon({className:'',html:'<div style="width:16px;height:16px;background:#111;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8]});
-const mS=L.marker([rSt.from.lat,rSt.from.lon],{icon:pinStart}).addTo(map).bindTooltip("Partenza");
-const mE=L.marker([rSt.to.lat,rSt.to.lon],{icon:pinEnd}).addTo(map).bindTooltip("Arrivo");
-mkrs.push(mS,mE);bounds.push([rSt.from.lat,rSt.from.lon],[rSt.to.lat,rSt.to.lon]);
-poly.forEach(p=>{const ll=decPL(p.p);const pl=L.polyline(ll,{color:p.c,weight:5,opacity:0.8}).addTo(map);mkrs.push(pl);bounds=bounds.concat(ll)});if(bounds.length)map.fitBounds(bounds,{padding:[40,40]})}})}else rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun percorso</p></div>'}catch(e){rl.classList.add('hidden');rd.innerHTML=`<div class="card-bus p-3 text-center rounded-xl"><p class="text-red-500 font-bold text-xs">Errore</p><p class="text-gray-400 text-xs">${e.message}</p></div>`}}
+async function calcRoute(){
+    const from=document.getElementById('rFrom').value,to=document.getElementById('rTo').value,rd=document.getElementById('rRes'),rl=document.getElementById('rLoad');
+    if(!from||!to){tst('','Compila entrambi',true);return}
+    rd.innerHTML='';rl.classList.remove('hidden');
+    try{
+        if(!rSt.from){const d=await F(`https://photon.komoot.io/api/?q=${encodeURIComponent(from+', Barcelona')}&lat=41.3851&lon=2.1734&limit=1`);if(d?.features?.[0])rSt.from={lat:d.features[0].geometry.coordinates[1],lon:d.features[0].geometry.coordinates[0]}}
+        if(!rSt.to){const d=await F(`https://photon.komoot.io/api/?q=${encodeURIComponent(to+', Barcelona')}&lat=41.3851&lon=2.1734&limit=1`);if(d?.features?.[0])rSt.to={lat:d.features[0].geometry.coordinates[1],lon:d.features[0].geometry.coordinates[0]}}
+        if(!rSt.from||!rSt.to)throw new Error('Luogo non trovato, sii più specifico');
+        
+        const dt=new Date(),ds=`${(dt.getMonth()+1).toString().padStart(2,'0')}-${dt.getDate().toString().padStart(2,'0')}-${dt.getFullYear()}`,ts=`${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
+        const data=await F(`${BU}/planner/plan?fromPlace=${rSt.from.lat},${rSt.from.lon}&toPlace=${rSt.to.lat},${rSt.to.lon}&date=${ds}&time=${ts}&mode=TRANSIT,WALK&app_id=${AID}&app_key=${AKEY}`);
+        rl.classList.add('hidden');
+        
+        if(data.plan?.itineraries?.length){
+            const bi=data.plan.itineraries.filter(it=>it.legs.some(l=>l.mode!=='WALK'));
+            if(!bi.length){rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun mezzo pubblico, solo a piedi</p></div>';return}
+            
+            currentRoutesData = []; // Azzera i dati dei percorsi precedenti
+            let htmlStr = '';
+            
+            bi.slice(0,3).forEach((it,idx)=>{
+                const dur=Math.round(it.duration/60),st=new Date(it.startTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),et=new Date(it.endTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+                let seg='',poly=[];
+                
+                it.legs.forEach(leg=>{
+                    if(leg.legGeometry?.points){
+                        let c='#dc0530';
+                        if(leg.mode==='WALK')c='#999';
+                        else if(leg.routeColor)c=`#${leg.routeColor}`;
+                        else if(leg.mode==='SUBWAY')c='#e2241a';
+                        
+                        const n=(leg.routeShortName||'').toUpperCase();
+                        if(leg.mode==='BUS'){
+                            if(n.startsWith('V'))c='#00a651';
+                            else if(n.startsWith('H'))c='#003888';
+                            else if(n.startsWith('D'))c='#8e44ad';
+                            else if(n.match(/^[MLEB]/))c='#ffde00';
+                        }
+                        poly.push({p:leg.legGeometry.points,c:c});
+                    }
+                    if(leg.mode==='WALK'){
+                        seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:#fff;border-color:#ccc"></div><span class="segment-walk-info">🚶 ${Math.round(leg.duration/60)}' (${Math.round(leg.distance)}m)</span></div>`;
+                    }else{
+                        const ln=leg.routeShortName||leg.route;
+                        let icn='🚌';
+                        if(leg.mode==='SUBWAY')icn='🚇';
+                        else if(leg.mode==='TRAM')icn='🚋';
+                        else if(leg.mode==='RAIL')icn='🚆';
+                        let bg=leg.routeColor?`background:#${leg.routeColor};`:'';
+                        let cls='bus-badge ';
+                        if(leg.mode==='BUS'&&ln.match(/^[VHDXMLEBN]/i))cls+=gLC(ln);
+                        else if(!bg)bg='background:#333;';
+                        seg+=`<div class="segment-detail"><div class="segment-line-left"></div><div class="segment-dot-indicator" style="background:${leg.routeColor?`#${leg.routeColor}`:'#dc0530'}"></div><div class="segment-bus-info"><div class="flex items-center gap-2 mb-2"><div class="${cls}" style="${bg}font-size:.8rem;padding:4px 7px;min-width:34px">${icn} ${ln}</div><span class="text-xs text-gray-500 font-medium truncate">→ ${leg.headsign}</span></div><div><div class="stop-label">Sali</div><div class="stop-name-route">${leg.from.name}</div></div><div class="text-center my-1 text-gray-300 font-bold">↓</div><div><div class="stop-label">Scendi</div><div class="stop-name-route">${leg.to.name}</div></div></div></div>`;
+                    }
+                });
+                currentRoutesData.push({ poly: poly });
+                const borderStyle = idx === 0 ? 'border: 2px solid #dc0530;' : 'border: 1px solid #eee;';
+                htmlStr += `<div class="route-card fade-in" id="route-card-${idx}" onclick="drawRouteOnMap(${idx})" style="cursor:pointer; transition:all 0.2s; ${borderStyle}"><div class="route-summary"><div class="route-time">${st}-${et}</div><div class="route-duration">${dur}'</div></div><div class="pl-2">${seg}</div></div>`;
+            });
+            rd.innerHTML = htmlStr;
+            if(currentRoutesData.length > 0){
+                drawRouteOnMap(0); // Disegna automaticamente il primo sulla mappa
+            }
+        }else{
+            rd.innerHTML='<div class="card-bus p-3 text-center rounded-xl"><p class="text-orange-500 font-bold text-xs">Nessun percorso</p></div>';
+        }
+    }catch(e){
+        rl.classList.add('hidden');
+        rd.innerHTML=`<div class="card-bus p-3 text-center rounded-xl"><p class="text-red-500 font-bold text-xs">Errore</p><p class="text-gray-400 text-xs">${e.message}</p></div>`;
+    }
+}
+
+// Nuova funzione per disegnare un percorso specifico quando ci clicchi sopra
+function drawRouteOnMap(idx) {
+    document.querySelectorAll('.route-card').forEach((card, i) => {
+        card.style.border = i === idx ? '2px solid #dc0530' : '1px solid #eee';
+        card.style.boxShadow = i === idx ? '0 4px 12px rgba(220,5,48,.15)' : 'none';
+    });
+
+    mkrs.forEach(m=>map.removeLayer(m));
+    mkrs=[];
+    if(selMkr){map.removeLayer(selMkr);selMkr=null;}
+
+    const route = currentRoutesData[idx];
+    if (!route) return;
+
+    let bounds=[];
+    const pinStart=L.divIcon({className:'',html:'<div style="width:16px;height:16px;background:#00c853;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+    const pinEnd=L.divIcon({className:'',html:'<div style="width:16px;height:16px;background:#111;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+    
+    const mS=L.marker([rSt.from.lat,rSt.from.lon],{icon:pinStart}).addTo(map).bindTooltip("Partenza");
+    const mE=L.marker([rSt.to.lat,rSt.to.lon],{icon:pinEnd}).addTo(map).bindTooltip("Arrivo");
+    mkrs.push(mS,mE);
+    bounds.push([rSt.from.lat,rSt.from.lon],[rSt.to.lat,rSt.to.lon]);
+    
+    route.poly.forEach(p=>{
+        const ll=decPL(p.p);
+        const pl=L.polyline(ll,{color:p.c,weight:5,opacity:0.8}).addTo(map);
+        mkrs.push(pl);
+        bounds=bounds.concat(ll);
+    });
+    
+    if(bounds.length)map.fitBounds(bounds,{padding:[40,40]});
+}
 
 document.addEventListener('DOMContentLoaded',async()=>{initMap();await loadAllS();rQF();document.addEventListener('click',e=>{if(!e.target.closest('.search-input-wrapper')&&!e.target.closest('.stop-suggestions'))cSug();if(!e.target.closest('.suggestions-list')&&!e.target.closest('.input-modern'))document.querySelectorAll('.suggestions-list').forEach(l=>l.style.display='none');if(!e.target.closest('.map-stop-popup')&&!e.target.closest('.leaflet-marker-icon'))document.getElementById('mPop').classList.remove('show')})});
 </script>
