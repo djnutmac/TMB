@@ -396,7 +396,7 @@ function rFL(){const c=document.getElementById('favList');if(!fav.length){c.inne
 function selSt(c){sTab('cerca');document.getElementById('stopCode').value=c;doSearch()}
 
 async function loadAllS(){
-    const lsKey = 'tmbf_all_stops_tmb_only_v3';
+    const lsKey = 'tmbf_all_stops_tmb_only_v4';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
@@ -427,7 +427,7 @@ async function loadLn(){
     document.getElementById('lnLoad').classList.remove('hidden');
     document.getElementById('lnContent').innerHTML='';
     
-    const lsKey = 'tmbf_all_lines_tmb_only_v3';
+    const lsKey = 'tmbf_all_lines_tmb_only_v4';
     const cached = localStorage.getItem(lsKey);
     if(cached){
         try {
