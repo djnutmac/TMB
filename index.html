@@ -387,7 +387,7 @@ async function doSearch(sil=false){
         if(!sil && selMkr) {
             let popHtml = `<div class="text-center font-bold text-[11px] mb-1.5 text-gray-800 leading-tight border-b border-gray-100 pb-1">${curS.name}</div>`;
             if(buses.length){
-                popHtml += buses.slice(0,3).map(x=> `<div class="flex justify-between items-center gap-3 mb-1"><span class="bus-badge-sm ${gLC(x.line)}" style="font-size:0.6rem;padding:2px 5px;min-width:24px">${x.line}</span><span class="text-[0.7rem] font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('');
+                popHtml += `<div style="max-height:160px; overflow-y:auto; overflow-x:hidden; padding-right:2px;" class="scrollbar-custom">` + buses.map(x=> `<div class="flex justify-between items-center gap-3 mb-1"><span class="bus-badge-sm ${gLC(x.line)}" style="font-size:0.6rem;padding:2px 5px;min-width:24px">${x.line}</span><span class="text-[0.7rem] font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('') + `</div>`;
             } else {
                 popHtml += `<div class="text-[0.65rem] text-gray-500 text-center">Nessun bus</div>`;
             }
@@ -651,13 +651,13 @@ async function mapClick(s){
         const d=await F(`${BU}/ibus/stops/${s.code}?app_id=${AID}&app_key=${AKEY}`);
         let b = d.data?.ibus?.length ? d.data.ibus : [];
         if(b.length){
-            const flt=b.filter(x=>!(x.line||'').toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']).slice(0,4);
-            document.getElementById('popB').innerHTML=flt.map(x=>`<div class="flex items-center justify-between"><div class="flex items-center gap-1"><span class="bus-badge-sm ${gLC(x.line)}" style="cursor:default;font-size:.65rem;padding:2px 5px;min-width:28px">${x.line}</span><span class="text-xs text-gray-500 truncate" style="max-width:80px">${x.destination||''}</span></div><span class="text-xs font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('');
+            const flt=b.filter(x=>!(x.line||'').toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']);
+            document.getElementById('popB').innerHTML=`<div style="max-height:120px; overflow-y:auto; padding-right:4px;" class="scrollbar-custom">` + flt.map(x=>`<div class="flex items-center justify-between mb-1"><div class="flex items-center gap-1"><span class="bus-badge-sm ${gLC(x.line)}" style="cursor:default;font-size:.65rem;padding:2px 5px;min-width:28px">${x.line}</span><span class="text-xs text-gray-500 truncate" style="max-width:80px">${x.destination||''}</span></div><span class="text-xs font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('') + `</div>`;
             
             // AGGIUNTA: Mostra il popup sul pallino giallo anche quando clicchi sulla mappa
             if(selMkr) {
                 let popHtml = `<div class="text-center font-bold text-[11px] mb-1.5 text-gray-800 leading-tight border-b border-gray-100 pb-1">${s.name}</div>`;
-                popHtml += flt.slice(0,3).map(x=> `<div class="flex justify-between items-center gap-3 mb-1"><span class="bus-badge-sm ${gLC(x.line)}" style="font-size:0.6rem;padding:2px 5px;min-width:24px">${x.line}</span><span class="text-[0.7rem] font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('');
+                popHtml += `<div style="max-height:160px; overflow-y:auto; overflow-x:hidden; padding-right:2px;" class="scrollbar-custom">` + flt.map(x=> `<div class="flex justify-between items-center gap-3 mb-1"><span class="bus-badge-sm ${gLC(x.line)}" style="font-size:0.6rem;padding:2px 5px;min-width:24px">${x.line}</span><span class="text-[0.7rem] font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('') + `</div>`;
                 selMkr.bindPopup(popHtml, {closeButton: false, offset: [0, -10], className: 'custom-map-popup', autoPan: false}).openPopup();
             }
         }else{
