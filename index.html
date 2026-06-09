@@ -313,7 +313,24 @@ function gLC(l){const u=(l||'').toUpperCase();if(u.startsWith('V'))return'line-v
 function gLCC(n){const u=(n||'').toUpperCase();if(u.startsWith('V'))return'green';if(u.startsWith('H'))return'blue';if(u.startsWith('D'))return'purple';if(u.startsWith('N'))return'nitbus';return'';}
 function fA(m){if(m<=0)return'<span class="time-display time-green">⚡</span>';if(m<=2)return`<span class="time-display time-green">${m}\'</span>`;if(m<=5)return`<span class="time-display time-orange">${m}\'</span>`;return`<span class="time-display time-red">${m}\'</span>`}
 function toggleAR(){arOn=!arOn;document.getElementById('arToggle').classList.toggle('active',arOn);document.getElementById('rDot').classList.toggle('paused',!arOn);if(arOn)startAR();else stopAR()}
-function startAR(){stopAR();if(arOn)arInt=setInterval(()=>doSearch(true),15000)}
+
+async function updateMapPopupSilently(code, sName) {
+    if(!selMkr || !selMkr.isPopupOpen()) return;
+    try {
+        const d=await F(`${BU}/ibus/stops/${code}?app_id=${AID}&app_key=${AKEY}`);
+        let b = d.data?.ibus?.length ? d.data.ibus : [];
+        const flt=b.filter(x=>!(x.line||'').toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']);
+        let popHtml = `<div class="text-center font-bold text-[11px] mb-1.5 text-gray-800 leading-tight border-b border-gray-100 pb-1">${sName}</div>`;
+        if(flt.length){
+            popHtml += `<div style="max-height:160px; overflow-y:auto; overflow-x:hidden; padding-right:2px;" class="scrollbar-custom">` + flt.map(x=> `<div class="flex justify-between items-center gap-3 mb-1"><span class="bus-badge-sm ${gLC(x.line)}" style="font-size:0.6rem;padding:2px 5px;min-width:24px">${x.line}</span><span class="text-[0.7rem] font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('') + `</div>`;
+        } else {
+            popHtml += `<div class="text-[0.65rem] text-gray-500 text-center">Nessun bus</div>`;
+        }
+        selMkr.setPopupContent(popHtml);
+    } catch(e) {}
+}
+
+function startAR(){stopAR();if(arOn)arInt=setInterval(()=>{doSearch(true);if(selMkr&&selMkr.isPopupOpen()&&popS&&selMkr.stopCode!=lastC){updateMapPopupSilently(selMkr.stopCode,popS.name)}},15000)}
 function stopAR(){if(arInt){clearInterval(arInt);arInt=null}}
 
 let ssT;
@@ -321,7 +338,7 @@ function hSS(){clearTimeout(ssT);const q=document.getElementById('stopCode').val
 function cSug(){document.getElementById('sSug').style.display='none'}
 
 function clearMap(){mkrs.forEach(m=>map.removeLayer(m));mkrs=[];if(selMkr){map.removeLayer(selMkr);selMkr=null}}
-function hlOnMap(code, isPopup=false){if(selMkr){map.removeLayer(selMkr);selMkr=null;}const s=allS.find(x=>x.code==code);if(!s||!s.lat||!s.lon)return null;const yI=L.divIcon({className:'',html:`<div style="width:20px;height:20px;background:#ffc107;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(255,193,7,.6),0 2px 8px rgba(0,0,0,.3);z-index:9000"></div>`,iconSize:[20,20],iconAnchor:[10,10]});selMkr=L.marker([s.lat,s.lon],{icon:yI,zIndexOffset:9000}).addTo(map);if(!isPopup)selMkr.bindTooltip(`<strong>📍 ${s.name}</strong><br>#${s.code}`,{direction:'top',offset:[0,-12]});map.setView([s.lat,s.lon],17,{animate:true});return selMkr;}
+function hlOnMap(code, isPopup=false){if(selMkr){map.removeLayer(selMkr);selMkr=null;}const s=allS.find(x=>x.code==code);if(!s||!s.lat||!s.lon)return null;const yI=L.divIcon({className:'',html:`<div style="width:20px;height:20px;background:#ffc107;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(255,193,7,.6),0 2px 8px rgba(0,0,0,.3);z-index:9000"></div>`,iconSize:[20,20],iconAnchor:[10,10]});selMkr=L.marker([s.lat,s.lon],{icon:yI,zIndexOffset:9000}).addTo(map);selMkr.stopCode=code;if(!isPopup)selMkr.bindTooltip(`<strong>📍 ${s.name}</strong><br>#${s.code}`,{direction:'top',offset:[0,-12]});map.setView([s.lat,s.lon],17,{animate:true});return selMkr;}
 
 async function loadStopLines(code){if(stopLinesCache[code])return stopLinesCache[code];try{const d=await F(`${BU}/transit/parades/${code}?app_id=${AID}&app_key=${AKEY}`, 86400000);if(d.features?.length){const props=d.features[0].properties;let lines=[];const liniesStr=props.LINIES||props.linies||props.LINIA||'';if(liniesStr) lines=liniesStr.split(/[,\s]+/).map(l=>l.trim()).filter(l=>l&&!l.toUpperCase().startsWith('N'));if(!lines.length&&props.lines) lines=props.lines.filter(l=>!l.toUpperCase().startsWith('N'));stopLinesCache[code]=lines;return lines;}}catch(e){}return[];}
 async function getStopAllLines(code, ibusLines){const lineSet=new Set(ibusLines||[]);try{const apiLines=await loadStopLines(code);apiLines.forEach(l=>lineSet.add(l));}catch(e){}return[...lineSet].filter(l=>!l.toUpperCase().startsWith('N')).sort((a,b)=>natS(a,b));}
@@ -377,21 +394,23 @@ async function doSearch(sil=false){
         buses = buses.filter(x=>!x.line.toUpperCase().startsWith('N')).sort((a,b)=>a['t-in-min']-b['t-in-min']);
         
         if(!buses.length){
-            document.getElementById('errTxt').textContent='Nessun bus diurno in arrivo.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';return;
+            document.getElementById('errTxt').textContent='Nessun bus diurno in arrivo.';document.getElementById('errBox').classList.remove('hidden');document.getElementById('results').innerHTML='';
+            if(selMkr && selMkr.stopCode == code) {
+                let popHtml = `<div class="text-center font-bold text-[11px] mb-1.5 text-gray-800 leading-tight border-b border-gray-100 pb-1">${curS.name}</div><div class="text-[0.65rem] text-gray-500 text-center">Nessun bus</div>`;
+                if(!sil) selMkr.bindPopup(popHtml, {closeButton: false, offset: [0, -10], className: 'custom-map-popup', autoPan: false}).openPopup();
+                else if(selMkr.isPopupOpen()) selMkr.setPopupContent(popHtml);
+            }
+            return;
         }
         
         document.getElementById('errBox').classList.add('hidden');
         document.getElementById('results').innerHTML=buses.map((x,i)=>`<div class="card-bus rounded-xl p-3 ${sil?'':'fade-in'}" style="${sil?'':'animation-delay:'+i*.03+'s'}"><div class="bus-row"><div class="bus-info"><div class="bus-badge ${gLC(x.line)}">${x.line}</div><div class="bus-destination"><p class="font-semibold text-gray-800 text-sm">${x.destination||''}</p><p class="text-gray-400 text-xs">${x['text-ca']||''}</p></div></div><div class="flex-shrink-0 text-right">${fA(x['t-in-min'])}</div></div></div>`).join('');
 
-        // AGGIUNTA: Apri automaticamente il popup sul punto giallo sulla mappa durante la ricerca
-        if(!sil && selMkr) {
+        if(selMkr && selMkr.stopCode == code) {
             let popHtml = `<div class="text-center font-bold text-[11px] mb-1.5 text-gray-800 leading-tight border-b border-gray-100 pb-1">${curS.name}</div>`;
-            if(buses.length){
-                popHtml += `<div style="max-height:160px; overflow-y:auto; overflow-x:hidden; padding-right:2px;" class="scrollbar-custom">` + buses.map(x=> `<div class="flex justify-between items-center gap-3 mb-1"><span class="bus-badge-sm ${gLC(x.line)}" style="font-size:0.6rem;padding:2px 5px;min-width:24px">${x.line}</span><span class="text-[0.7rem] font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('') + `</div>`;
-            } else {
-                popHtml += `<div class="text-[0.65rem] text-gray-500 text-center">Nessun bus</div>`;
-            }
-            selMkr.bindPopup(popHtml, {closeButton: false, offset: [0, -10], className: 'custom-map-popup', autoPan: false}).openPopup();
+            popHtml += `<div style="max-height:160px; overflow-y:auto; overflow-x:hidden; padding-right:2px;" class="scrollbar-custom">` + buses.map(x=> `<div class="flex justify-between items-center gap-3 mb-1"><span class="bus-badge-sm ${gLC(x.line)}" style="font-size:0.6rem;padding:2px 5px;min-width:24px">${x.line}</span><span class="text-[0.7rem] font-bold ${x['t-in-min']<=2?'text-green-500':'text-red-500'}">${x['t-in-min']<=0?'⚡':x['t-in-min']+"'"}</span></div>`).join('') + `</div>`;
+            if(!sil) selMkr.bindPopup(popHtml, {closeButton: false, offset: [0, -10], className: 'custom-map-popup', autoPan: false}).openPopup();
+            else if(selMkr.isPopupOpen()) selMkr.setPopupContent(popHtml);
         }
 
         if(!sil){
