@@ -118,13 +118,10 @@
         .custom-map-popup .leaflet-popup-tip { background: white; }
 
         /* Stile specifico per la modalità Display Fullscreen */
-        body.mode-display .panel-left { width: 100% !important; max-width: none !important; border-right: none; padding: 0 !important; background: #000; }
+        body.mode-display .panel-left { width: 100% !important; height: 100% !important; max-width: none !important; border-right: none; padding: 0 !important; background: #000; }
         body.mode-display .panel-right { display: none !important; }
-        body.mode-display .header-bar { background: #111; border-bottom: 1px solid #333; }
-        body.mode-display .header-bar h1 { color: #fff; }
-        body.mode-display .tabs-bar { background: #222; border-bottom: 1px solid #444; }
-        body.mode-display .tab-btn { color: #aaa; }
-        body.mode-display .tab-btn.active { color: #dc0530; background: #111; }
+        body.mode-display .header-bar { display: none !important; }
+        body.mode-display .tabs-bar { display: none !important; }
     </style>
 </head>
 <body>
@@ -188,14 +185,20 @@
 
             <!-- TAB DISPLAY FULLSCREEN -->
             <div id="contentDisplay" class="hidden h-full w-full bg-black">
-                <div class="flex flex-col h-full w-full">
-                    <div id="dispPlaceholder" class="flex-1 flex items-center justify-center text-gray-500 text-lg font-semibold">
+                <div class="flex flex-col h-full w-full relative">
+                    <div id="dispPlaceholder" class="flex-1 flex items-center justify-center text-gray-500 text-lg font-semibold relative">
+                        <button onclick="sTab('cerca')" class="absolute top-4 left-4 text-gray-400 hover:text-white p-2 transition-colors cursor-pointer z-50">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        </button>
                         Cerca una fermata per visualizzare la plancia
                     </div>
                     <div id="dispBoard" class="hidden flex-col h-full w-full">
                         <div class="flex justify-between items-center p-3 sm:p-4 border-b border-gray-800 bg-gray-900 shadow-md">
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-2 sm:gap-3">
+                            <div class="min-w-0 flex-1 flex items-center">
+                                <button onclick="sTab('cerca')" class="text-gray-400 hover:text-white mr-3 sm:mr-4 flex-shrink-0 transition-colors cursor-pointer" title="Indietro">
+                                    <svg class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                                </button>
+                                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
                                     <span id="dispCode" class="text-yellow-400 text-lg sm:text-xl font-black bg-gray-800 px-2 py-1 rounded"></span>
                                     <h2 id="dispName" class="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-tight uppercase truncate"></h2>
                                 </div>
@@ -487,7 +490,7 @@ async function doSearch(sil=false){
                 <div class="flex items-center justify-between p-2 sm:p-3 mb-2 bg-gray-900 rounded-2xl border border-gray-800 shadow-md">
                     <div class="flex items-center gap-3 sm:gap-4 w-2/3 min-w-0">
                         <div class="${gLC(x.line)} flex items-center justify-center text-2xl sm:text-3xl font-black w-16 h-16 sm:w-20 sm:h-20 rounded-full flex-shrink-0 shadow-lg" style="box-shadow: 0 2px 8px rgba(0,0,0,0.5);">${x.line}</div>
-                        <div class="text-white font-black text-xl sm:text-2xl md:text-3xl truncate tracking-tight uppercase">${x.destination||''}</div>
+                        <div class="text-white font-black text-3xl sm:text-4xl md:text-5xl truncate tracking-tight uppercase leading-none">${x.destination||''}</div>
                     </div>
                     <div class="text-right flex-shrink-0 ml-3 pr-2 sm:pr-4">
                         ${fADisp(x['t-in-min'])}
