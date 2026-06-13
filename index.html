@@ -28,8 +28,8 @@
         .gradient-red{background:linear-gradient(135deg,#dc0530,#ff1744)}
         
         /* Badge rigorosamente rotondi */
-        .bus-badge{width:54px;height:54px;border-radius:50%;font-weight:700;display:flex;align-items:center;justify-content:center;color:white;font-size:1rem;letter-spacing:-.5px;box-shadow:0 2px 6px rgba(0,0,0,.2);flex-shrink:0;}
-        .bus-badge-sm{width:34px;height:34px;border-radius:50%;font-weight:700;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:.7rem;box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer;transition:all .2s;flex-shrink:0;}
+        .bus-badge{width:46px;height:46px;border-radius:50%;font-weight:700;display:flex;align-items:center;justify-content:center;color:white;font-size:1rem;letter-spacing:-.5px;box-shadow:0 2px 6px rgba(0,0,0,.2);flex-shrink:0;}
+        .bus-badge-sm{width:28px;height:28px;border-radius:50%;font-weight:700;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:.65rem;box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer;transition:all .2s;flex-shrink:0;}
         .bus-badge-sm:hover{transform:scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,.25)}
         
         .line-normal{background:linear-gradient(135deg,#dc0530,#ff1744); color: white;}
@@ -609,7 +609,7 @@ function renderLn(flt=''){
     order.forEach(k=>{
         if(!g[k]?.length)return;
         h+=`<h3 class="font-bold text-gray-600 mb-2 mt-3 text-xs">${k==='Numeriche'?'Numeriche':k} (${g[k].length})</h3><div class="lines-grid">`;
-        g[k].forEach(l=>h+=`<div class="line-grid-item" onclick="loadLS('${l.code}','${l.name}')"><div class="${gLC(l.name)} flex items-center justify-center rounded-full text-white font-bold shadow-sm" style="width:54px;height:54px;font-size:1.1rem;margin:0 auto 4px auto;">${l.name}</div><div class="line-label">${l.origin?l.origin.substring(0,8):''}</div></div>`);
+        g[k].forEach(l=>h+=`<div class="line-grid-item" onclick="loadLS('${l.code}','${l.name}')"><div class="${gLC(l.name)} flex items-center justify-center rounded-full text-white font-bold shadow-sm" style="width:46px;height:46px;font-size:1rem;margin:0 auto 4px auto;">${l.name}</div><div class="line-label">${l.origin?l.origin.substring(0,8):''}</div></div>`);
         h+='</div>'
     });
     
