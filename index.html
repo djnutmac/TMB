@@ -193,18 +193,18 @@
                         Cerca una fermata per visualizzare la plancia
                     </div>
                     <div id="dispBoard" class="hidden flex-col h-full w-full">
-                        <div class="flex justify-between items-center p-3 sm:p-4 border-b border-gray-800 bg-gray-900 shadow-md">
+                        <div class="flex justify-between items-center p-3 sm:p-4 border-b border-gray-800 bg-gray-900 shadow-md gap-2">
                             <div class="min-w-0 flex-1 flex items-center">
-                                <button onclick="sTab('cerca')" class="text-gray-400 hover:text-white mr-3 sm:mr-4 flex-shrink-0 transition-colors cursor-pointer" title="Indietro">
-                                    <svg class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                                <button onclick="sTab('cerca')" class="text-gray-400 hover:text-white mr-2 sm:mr-4 flex-shrink-0 transition-colors cursor-pointer" title="Indietro">
+                                    <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                                 </button>
-                                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
-                                    <span id="dispCode" class="text-yellow-400 text-lg sm:text-xl font-black bg-gray-800 px-2 py-1 rounded"></span>
-                                    <h2 id="dispName" class="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-tight uppercase truncate"></h2>
+                                <div class="flex flex-col justify-center min-w-0">
+                                    <span id="dispCode" class="text-yellow-400 text-[0.65rem] sm:text-lg font-black bg-gray-800 px-1.5 py-0.5 rounded w-max mb-0.5"></span>
+                                    <h2 id="dispName" class="text-lg sm:text-3xl md:text-4xl font-black text-white tracking-tight uppercase line-clamp-2 leading-tight"></h2>
                                 </div>
                             </div>
-                            <div class="text-right ml-3 sm:ml-4">
-                                <span id="dispClock" class="text-xl sm:text-3xl md:text-4xl font-black text-gray-300"></span>
+                            <div class="text-right flex-shrink-0 ml-2 sm:ml-4">
+                                <span id="dispClock" class="text-lg sm:text-3xl md:text-4xl font-black text-gray-300"></span>
                             </div>
                         </div>
                         <div id="dispResults" class="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 scrollbar-custom bg-black">
@@ -369,10 +369,10 @@ function gLC(l){const u=(l||'').toUpperCase();if(u.startsWith('V'))return'line-v
 function fA(m){if(m<=0)return'<span class="time-display time-green">⚡</span>';if(m<=2)return`<span class="time-display time-green">${m}\'</span>`;if(m<=5)return`<span class="time-display time-orange">${m}\'</span>`;return`<span class="time-display time-red">${m}\'</span>`}
 
 function fADisp(m){
-    if(m<=0)return '<span class="text-green-400 font-black animate-pulse text-xl sm:text-2xl tracking-tighter">IN ARRIVO</span>';
-    if(m<=2)return `<span class="text-green-400 font-black text-3xl sm:text-4xl">${m}'</span>`;
-    if(m<=5)return `<span class="text-yellow-400 font-black text-3xl sm:text-4xl">${m}'</span>`;
-    return `<span class="text-red-500 font-black text-3xl sm:text-4xl">${m}'</span>`;
+    if(m<=0)return '<span class="text-green-400 font-black animate-pulse text-[0.85rem] sm:text-xl tracking-tighter">IN ARRIVO</span>';
+    if(m<=2)return `<span class="text-green-400 font-black text-3xl sm:text-5xl">${m}'</span>`;
+    if(m<=5)return `<span class="text-yellow-400 font-black text-3xl sm:text-5xl">${m}'</span>`;
+    return `<span class="text-red-500 font-black text-3xl sm:text-5xl">${m}'</span>`;
 }
 
 function toggleAR(){arOn=!arOn;document.getElementById('arToggle').classList.toggle('active',arOn);document.getElementById('rDot').classList.toggle('paused',!arOn);if(arOn)startAR();else stopAR()}
@@ -487,12 +487,12 @@ async function doSearch(sil=false){
             document.getElementById('dispPlaceholder').classList.add('hidden');
             document.getElementById('dispBoard').classList.remove('hidden');
             document.getElementById('dispResults').innerHTML = buses.map(x => `
-                <div class="flex items-center justify-between p-2 sm:p-3 mb-2 bg-gray-900 rounded-2xl border border-gray-800 shadow-md">
-                    <div class="flex items-center gap-3 sm:gap-4 w-2/3 min-w-0">
-                        <div class="${gLC(x.line)} flex items-center justify-center text-2xl sm:text-3xl font-black w-16 h-16 sm:w-20 sm:h-20 rounded-full flex-shrink-0 shadow-lg" style="box-shadow: 0 2px 8px rgba(0,0,0,0.5);">${x.line}</div>
-                        <div class="text-white font-black text-3xl sm:text-4xl md:text-5xl truncate tracking-tight uppercase leading-none">${x.destination||''}</div>
+                <div class="flex items-center justify-between p-2.5 sm:p-4 mb-2 bg-gray-900 rounded-2xl border border-gray-800 shadow-md gap-2">
+                    <div class="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div class="${gLC(x.line)} flex items-center justify-center text-[1.1rem] sm:text-3xl font-black w-[48px] h-[48px] sm:w-20 sm:h-20 rounded-full flex-shrink-0 shadow-lg" style="box-shadow: 0 2px 8px rgba(0,0,0,0.5);">${x.line}</div>
+                        <div class="text-white font-black text-[1.1rem] sm:text-4xl tracking-tight uppercase leading-tight line-clamp-2">${x.destination||''}</div>
                     </div>
-                    <div class="text-right flex-shrink-0 ml-3 pr-2 sm:pr-4">
+                    <div class="text-right flex-shrink-0 ml-1 sm:ml-4 pr-1 sm:pr-2">
                         ${fADisp(x['t-in-min'])}
                     </div>
                 </div>
